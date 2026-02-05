@@ -1,0 +1,12 @@
+# Dependencies
+node_modules/
+
+# Environment variables (Secrets)
+.env
+
+# Build files
+dist/
+*.log
+
+# Editor settings
+.vscode/
