@@ -1,18 +1,13 @@
 {
   "compilerOptions": {
-    /* Base Options */
     "target": "es2016",
-    "module": "commonjs",             /* <--- This fixes the import squiggly lines */
-    "moduleResolution": "node",
+    "module": "commonjs",
     "rootDir": "./src",
     "outDir": "./dist",
-    
-    /* Strictness & Types */
+    "esModuleInterop": true,         // <--- FIXES "import fs from fs" errors
+    "forceConsistentCasingInFileNames": true,
     "strict": true,
-    "esModuleInterop": true,          /* <--- Allows "import express from 'express'" to work */
-    "skipLibCheck": true,             /* <--- Ignores errors in library definition files */
-    "forceConsistentCasingInFileNames": true
+    "skipLibCheck": true             // <--- Ignores errors in library files
   },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules"]
+  "include": ["src/**/*"]
 }
