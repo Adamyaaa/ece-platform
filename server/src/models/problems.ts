@@ -12,7 +12,7 @@ export interface IProblem extends Document {
 const ProblemSchema: Schema = new Schema({
   title: { type: String, required: true },
   difficulty: { type: String, required: true },
-  category: { type: String, required: true },
+  category: { type: String, required: false, default: "Hardware" }, // Made optional with default
   description: { type: String, required: true },
   templateCode: { type: String, required: true },
   testbench: { type: String, required: true } // <--- AND THIS LINE

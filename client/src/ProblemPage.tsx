@@ -4,17 +4,21 @@ import axios from 'axios';
 import Editor from "@monaco-editor/react";
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 import { Play, RotateCcw, CheckCircle, XCircle, Terminal, GripVertical, GripHorizontal } from 'lucide-react';
+import DiscussionTab from './components/DiscussionTab';
 
 interface Problem {
   title: string;
   description: string;
   templateCode: string;
+  difficulty: string; // Added
+  category?: string;  // Added
 }
 
 function ProblemPage() {
   const { id } = useParams();
   const [problem, setProblem] = useState<Problem | null>(null);
-  
+  const [activeTab, setActiveTab] = useState<'description' | 'discussion'>('description');
+
   // Editor States
   const [userCode, setUserCode] = useState("");
   const [output, setOutput] = useState("");
@@ -38,7 +42,7 @@ function ProblemPage() {
     try {
       const response = await axios.post('http://localhost:5000/api/run', {
         code: userCode,
-        problemId: id 
+        problemId: id
       });
 
       let rawOutput = response.data.output;
@@ -56,7 +60,7 @@ function ProblemPage() {
       if (cleanOutput.includes("Passed") && !cleanOutput.includes("Failed")) {
         const userId = localStorage.getItem("userId");
         if (userId) {
-           await axios.post('http://localhost:5000/api/solve', { userId, problemId: id });
+          await axios.post('http://localhost:5000/api/solve', { userId, problemId: id });
         }
       }
 
@@ -72,8 +76,8 @@ function ProblemPage() {
     const handleKeyDown = (e: KeyboardEvent) => {
       // ⌨️ SHORTCUT: Alt + Shift + R
       if (e.altKey && e.shiftKey && (e.key === 'r' || e.key === 'R')) {
-        e.preventDefault(); 
-        
+        e.preventDefault();
+
         if (!isRunning) {
           handleRunCode();
         }
@@ -82,28 +86,66 @@ function ProblemPage() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [userCode, isRunning]); 
+  }, [userCode, isRunning]);
 
   // 4. Loading Check
   if (!problem) return <div className="text-white text-center p-20 animate-pulse">Loading Problem...</div>;
 
   return (
     <div className="h-[calc(100vh-64px)] bg-black text-white overflow-hidden">
-      
+
       {/* ↔️ MAIN HORIZONTAL SPLIT (Description vs Code) */}
       <PanelGroup direction="horizontal">
-        
-        {/* LEFT PANEL: Description */}
-        <Panel defaultSize={40} minSize={20} className="flex flex-col bg-[#1a1a1a] border-r border-gray-800">
-          <div className="p-4 bg-[#262626] border-b border-gray-700 font-bold flex justify-between items-center">
-             <span>📜 Description</span>
-             <span className="text-xs text-gray-400 bg-gray-800 px-2 py-1 rounded">Problem #{id?.slice(-3)}</span>
-          </div>
-          <div className="flex-1 p-6 overflow-y-auto custom-scrollbar">
-            <h1 className="text-2xl font-bold mb-4">{problem.title}</h1>
-            <div className="prose prose-invert max-w-none text-gray-300">
-              <p className="whitespace-pre-wrap leading-relaxed">{problem.description}</p>
+
+        {/* LEFT PANEL: Description & Discussion */}
+        <Panel defaultSize={40} minSize={20} className="flex flex-col bg-[#0a0a0a] border-r border-gray-800">
+
+          {/* Tabs Header */}
+          <div className="flex items-center border-b border-gray-800 bg-[#111]">
+            <button
+              onClick={() => setActiveTab('description')}
+              className={`px-4 py-3 text-sm font-bold flex items-center gap-2 border-b-2 transition-colors ${activeTab === 'description' ? 'border-blue-500 text-white' : 'border-transparent text-gray-500 hover:text-gray-300'
+                }`}
+            >
+              📜 Description
+            </button>
+            <button
+              onClick={() => setActiveTab('discussion')}
+              className={`px-4 py-3 text-sm font-bold flex items-center gap-2 border-b-2 transition-colors ${activeTab === 'discussion' ? 'border-blue-500 text-white' : 'border-transparent text-gray-500 hover:text-gray-300'
+                }`}
+            >
+              💬 Discussion
+            </button>
+            <div className="flex-1 text-right pr-4">
+              <span className="text-xs text-gray-500 bg-gray-800/50 px-2 py-1 rounded border border-gray-700">Problem #{id?.slice(-3)}</span>
             </div>
+          </div>
+
+          {/* Tab Content */}
+          <div className="flex-1 overflow-y-auto custom-scrollbar relative">
+            {activeTab === 'description' ? (
+              <div className="p-6">
+                <h1 className="text-2xl font-bold mb-4">{problem.title}</h1>
+                <div className="flex gap-2 mb-6">
+                  <span className={`px-2 py-0.5 rounded text-xs font-bold border ${problem.difficulty === 'Easy' ? 'border-green-500/30 text-green-400 bg-green-500/10' :
+                    problem.difficulty === 'Medium' ? 'border-yellow-500/30 text-yellow-400 bg-yellow-500/10' :
+                      'border-red-500/30 text-red-400 bg-red-500/10'
+                    }`}>
+                    {problem.difficulty}
+                  </span>
+                  {problem.category && (
+                    <span className="px-2 py-0.5 rounded text-xs font-bold border border-blue-500/30 text-blue-400 bg-blue-500/10">
+                      {problem.category}
+                    </span>
+                  )}
+                </div>
+                <div className="prose prose-invert max-w-none text-gray-300">
+                  <p className="whitespace-pre-wrap leading-relaxed">{problem.description}</p>
+                </div>
+              </div>
+            ) : (
+              <DiscussionTab problemId={id || ''} />
+            )}
           </div>
         </Panel>
 
@@ -115,10 +157,10 @@ function ProblemPage() {
         {/* RIGHT PANEL: Code & Terminal */}
         <Panel minSize={30}>
           <PanelGroup direction="vertical">
-            
+
             {/* TOP RIGHT: Editor */}
             <Panel defaultSize={70} minSize={20} className="flex flex-col bg-[#1e1e1e]">
-              
+
               {/* Toolbar */}
               <div className="flex items-center justify-between px-4 py-2 bg-[#262626] border-b border-black">
                 <span className="text-xs text-gray-400 font-mono flex items-center gap-2">
@@ -126,22 +168,21 @@ function ProblemPage() {
                   solution.v
                 </span>
                 <div className="flex gap-2">
-                  <button 
+                  <button
                     onClick={() => setUserCode(problem.templateCode)}
                     className="p-1.5 text-gray-400 hover:text-white hover:bg-gray-700 rounded transition-all"
                     title="Reset Code"
                   >
                     <RotateCcw size={14} />
                   </button>
-                  
+
                   {/* ▶️ RUN BUTTON with TOOLTIP */}
-                  <button 
+                  <button
                     onClick={handleRunCode}
                     disabled={isRunning}
                     title="Run Code (Alt + Shift + R)" // <--- TOOLTIP ADDED HERE
-                    className={`flex items-center gap-2 px-3 py-1 rounded text-xs font-bold transition-all ${
-                      isRunning ? 'bg-blue-900/50 text-blue-300 cursor-wait' : 'bg-green-600 hover:bg-green-500 text-white'
-                    }`}
+                    className={`flex items-center gap-2 px-3 py-1 rounded text-xs font-bold transition-all ${isRunning ? 'bg-blue-900/50 text-blue-300 cursor-wait' : 'bg-green-600 hover:bg-green-500 text-white'
+                      }`}
                   >
                     {isRunning ? 'Running...' : <><Play size={14} /> Run Code</>}
                   </button>
@@ -178,18 +219,17 @@ function ProblemPage() {
                 <span className="text-xs font-mono text-gray-400 flex items-center gap-2">
                   <Terminal size={12} /> Console Output
                 </span>
-                
+
                 {/* 🟢 REFINED LOGIC: Only show badge if NOT running AND output exists */}
                 {!isRunning && output && (
-                  <span className={`text-xs font-bold flex items-center gap-1 ${
-                    output.includes("Passed") ? "text-green-500" : "text-red-400"
-                  }`}>
+                  <span className={`text-xs font-bold flex items-center gap-1 ${output.includes("Passed") ? "text-green-500" : "text-red-400"
+                    }`}>
                     {output.includes("Passed") ? <CheckCircle size={12} /> : <XCircle size={12} />}
                     {output.includes("Passed") ? "Success" : "Failed"}
                   </span>
                 )}
               </div>
-              
+
               <pre className="flex-1 p-4 font-mono text-sm overflow-y-auto text-gray-300 custom-scrollbar">
                 {output || <span className="text-gray-600 italic">// Run your code to see results...</span>}
               </pre>

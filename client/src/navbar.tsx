@@ -8,7 +8,7 @@ function Navbar() {
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const navigate = useNavigate();
 
-  // 👂 Listen for login state changes automatically
+  // Listen for login state changes automatically
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser); // Update state when user logs in/out
@@ -16,9 +16,12 @@ function Navbar() {
     return () => unsubscribe(); // Cleanup listener
   }, []);
 
-  // 🚪 Logout Function
+  // Logout Function
   const handleLogout = () => {
     signOut(auth).then(() => {
+      localStorage.removeItem('userId');
+      localStorage.removeItem('username');
+      localStorage.removeItem('token');
       navigate('/'); // Go home after logout
     });
   };
@@ -38,15 +41,20 @@ function Navbar() {
 
         {/* Middle Links */}
         <div className="flex items-center gap-6">
-          <Link to="/problems" className="text-gray-300 hover:text-white transition-colors">Problem Bank</Link>
-          <Link to="/contests" className="text-gray-300 hover:text-white transition-colors">Contests</Link>
-          <Link to="/roadmap" className="text-gray-300 hover:text-white transition-colors">Roadmap</Link>
+          <Link to="/problems" className="text-gray-300 hover:text-white hover:text-shadow-glow transition-all">Problem Bank</Link>
+          <Link to="/contests" className="text-gray-300 hover:text-white hover:text-shadow-glow transition-all">Contests</Link>
+          <Link to="/blogs" className="text-gray-300 hover:text-white hover:text-shadow-glow transition-all">Blogs</Link>
+          <Link to="/roadmap" className="text-gray-300 hover:text-white hover:text-shadow-glow transition-all">Roadmap</Link>
+          {/* Admin Link - Visible for now (Ideally check for admin role) */}
+          <Link to="/admin" className="text-red-400 hover:text-red-300 font-bold border border-red-500/30 px-3 py-1 rounded hover:bg-red-500/10 transition-all">
+            Admin
+          </Link>
         </div>
 
         {/* Right Side: Auth Logic */}
         <div className="flex items-center gap-4">
           {user ? (
-            // ✅ SHOW THIS IF LOGGED IN
+            // SHOW THIS IF LOGGED IN
             <>
               <Link to="/profile" className="flex items-center gap-2 text-gray-300 hover:text-white transition-colors">
                 {user.photoURL ? (
@@ -58,8 +66,8 @@ function Navbar() {
                 )}
                 <span className="font-medium hidden sm:block">{user.displayName?.split(' ')[0] || "User"}</span>
               </Link>
-              
-              <button 
+
+              <button
                 onClick={handleLogout}
                 className="text-gray-400 hover:text-red-400 transition-colors p-2"
                 title="Logout"
@@ -68,7 +76,7 @@ function Navbar() {
               </button>
             </>
           ) : (
-            // ❌ SHOW THIS IF LOGGED OUT
+            // SHOW THIS IF LOGGED OUT
             <>
               <Link to="/login" className="text-gray-300 hover:text-white font-medium">Log In</Link>
               <Link to="/signup" className="bg-blue-600 hover:bg-blue-500 text-white px-5 py-2 rounded-full font-medium transition-all">

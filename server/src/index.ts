@@ -1,8 +1,8 @@
-import express, { Request, Response } from 'express'; 
+import express, { Request, Response } from 'express';
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import cors from 'cors';
-import Problem from './models/problems'; 
+import Problem from './models/problems';
 import User from './models/User';
 
 dotenv.config();
@@ -33,8 +33,8 @@ app.get('/api/problems/:id', async (req: Request, res: Response) => {
   try {
     const problem = await Problem.findById(req.params.id);
     if (!problem) {
-        res.status(404).json({ message: "Problem not found" });
-        return; 
+      res.status(404).json({ message: "Problem not found" });
+      return;
     }
     res.json(problem);
   } catch (error) {
@@ -44,7 +44,7 @@ app.get('/api/problems/:id', async (req: Request, res: Response) => {
 
 const PORT = process.env.PORT || 5000;
 // Import the judge function
-import { runVerilog } from './judge/verilogRunner'; 
+import { runVerilog } from './judge/verilogRunner';
 
 // ... (your existing database/middleware code) ...
 
@@ -59,7 +59,7 @@ app.post('/api/run', async (req, res) => {
   try {
     // 1. Find the problem in the DB
     const problem = await Problem.findById(problemId);
-    
+
     if (!problem) {
       return res.status(404).json({ output: "❌ Error: Problem not found." });
     }
@@ -159,5 +159,149 @@ app.post('/api/google-login', async (req, res) => {
     res.status(500).json({ error: "Server Error" });
   }
 });
+// 🔒 ADMIN ROUTE: Add a new Problem
+app.post('/api/problems', async (req, res) => {
+  const { secret, title, description, difficulty, category, templateCode, driverCode, testbench } = req.body;
+
+  // 1. Simple Security Check
+  if (secret !== "admin-123") { // 👈 You can change this password later
+    return res.status(403).json({ error: "Unauthorized: Wrong Admin Key" });
+  }
+
+  try {
+    // 2. Create and Save
+    const newProblem = new Problem({
+      title,
+      description,
+      difficulty,
+      category,
+      templateCode,
+      driverCode, // The hidden Verilog that runs the test
+      testbench   // The Verilog test cases
+    });
+
+    await newProblem.save();
+    console.log(`✅ Admin added problem: ${title}`);
+    res.json({ success: true, problem: newProblem });
+
+  } catch (err) {
+    res.status(500).json({ error: "Failed to save problem." });
+  }
+});
+
+// DELETE a problem (Admin only)
+app.delete('/api/problems/:id', async (req, res) => {
+  const { secret } = req.body;
+
+  if (secret !== "admin-123") {
+    return res.status(403).json({ error: "Unauthorized: Wrong Admin Key" });
+  }
+
+  try {
+    const problem = await Problem.findByIdAndDelete(req.params.id);
+    if (!problem) return res.status(404).json({ error: "Problem not found" });
+
+    // Also delete all comments for this problem
+    await Comment.deleteMany({ problemId: req.params.id });
+
+    res.json({ success: true, message: `Deleted: ${problem.title}` });
+  } catch (error) {
+    console.error("Error deleting problem:", error);
+    res.status(500).json({ error: "Server Error" });
+  }
+});
+
+// ========== DISCUSSION / COMMENTS ROUTES ==========
+import Comment from './models/Comment';
+
+// GET all comments for a problem
+app.get('/api/comments/:problemId', async (req, res) => {
+  try {
+    const comments = await Comment.find({ problemId: req.params.problemId }).sort({ createdAt: -1 });
+    res.json(comments);
+  } catch (error) {
+    console.error("Error fetching comments:", error);
+    res.status(500).json({ error: "Server Error" });
+  }
+});
+
+// POST a new comment (or reply)
+app.post('/api/comments', async (req, res) => {
+  const { problemId, userId, username, text, parentId } = req.body;
+
+  if (!problemId || !userId || !username || !text) {
+    return res.status(400).json({ error: "Missing required fields" });
+  }
+
+  try {
+    const newComment = new Comment({
+      problemId,
+      userId,
+      username,
+      text,
+      likes: [],
+      parentId: parentId || null,
+    });
+    await newComment.save();
+    res.json(newComment);
+  } catch (error) {
+    console.error("Error posting comment:", error);
+    res.status(500).json({ error: "Server Error" });
+  }
+});
+
+// POST toggle like on a comment
+app.post('/api/comments/:id/like', async (req, res) => {
+  const { userId } = req.body;
+
+  if (!userId) {
+    return res.status(400).json({ error: "Missing userId" });
+  }
+
+  try {
+    const comment = await Comment.findById(req.params.id);
+    if (!comment) return res.status(404).json({ error: "Comment not found" });
+
+    const index = comment.likes.indexOf(userId);
+    if (index === -1) {
+      comment.likes.push(userId);
+    } else {
+      comment.likes.splice(index, 1);
+    }
+    await comment.save();
+    res.json(comment);
+  } catch (error) {
+    console.error("Error toggling like:", error);
+    res.status(500).json({ error: "Server Error" });
+  }
+});
+
+// DELETE a comment (by author or admin)
+app.delete('/api/comments/:id', async (req, res) => {
+  const { userId, secret } = req.body;
+
+  try {
+    const comment = await Comment.findById(req.params.id);
+    if (!comment) return res.status(404).json({ error: "Comment not found" });
+
+    // Allow if the user is the author OR has admin key
+    const isAuthor = userId && comment.userId === userId;
+    const isAdmin = secret === "admin-123";
+
+    if (!isAuthor && !isAdmin) {
+      return res.status(403).json({ error: "Not authorized to delete this comment" });
+    }
+
+    // Delete the comment and all its replies
+    await Comment.deleteMany({ parentId: comment._id });
+    await Comment.findByIdAndDelete(req.params.id);
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error("Error deleting comment:", error);
+    res.status(500).json({ error: "Server Error" });
+  }
+});
+
 // ... app.listen ...
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
