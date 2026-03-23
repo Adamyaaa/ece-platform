@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { API_URL } from './config';
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock, ArrowRight, Github } from 'lucide-react';
@@ -12,7 +13,7 @@ function Login() {
 
   // --- 1. Google Login Logic ---
   // Add this import at the top
-  
+
 
   // ... inside the component ...
 
@@ -21,26 +22,27 @@ function Login() {
       // 1. Authenticate with Google (Firebase)
       const result = await signInWithPopup(auth, googleProvider);
       const user = result.user;
-      
+
       console.log("🔥 Firebase Success:", user.email);
 
       // 2. SEND USER DATA TO YOUR BACKEND (The missing step!)
       // We send the email and name so the backend can create/find the user in MongoDB
-      const response = await axios.post('http://localhost:5000/api/google-login', {
+      const response = await axios.post(`${API_URL}/api/google-login`, {
         email: user.email,
         username: user.displayName || user.email?.split('@')[0], // Fallback username
         googleId: user.uid
       });
 
       // 3. SAVE THE MONGODB USER ID (Crucial for Profile & Solved Problems)
-      localStorage.setItem('token', response.data.token); // If your backend returns a token
+      localStorage.setItem('token', response.data.token);
       localStorage.setItem('userId', response.data.user._id);
       localStorage.setItem('username', response.data.user.username);
+      localStorage.setItem('profilePicture', response.data.user.profilePicture || '');
 
       console.log("✅ Backend Sync Success. User ID:", response.data.user._id);
 
       // 4. Navigate
-      navigate('/problems'); 
+      navigate('/problems');
 
     } catch (error) {
       console.error("❌ Login Failed:", error);
@@ -63,7 +65,7 @@ function Login() {
 
         {/* --- Social Login Section --- */}
         <div className="flex flex-col gap-3 mb-6">
-          <button 
+          <button
             onClick={handleGoogleLogin} // <--- Attached the function here
             className="flex items-center justify-center gap-3 bg-white text-black font-semibold py-3 rounded-lg hover:bg-gray-200 transition-colors"
           >
@@ -89,13 +91,13 @@ function Login() {
         </div>
 
         {/* ... (Keep the rest of your form the same) ... */}
-         <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-6">
           <div>
             <label className="block text-sm font-medium text-gray-400 mb-2">Email Address</label>
             <div className="relative">
               <Mail className="absolute left-3 top-3 text-gray-500" size={20} />
-              <input 
-                type="email" 
+              <input
+                type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full bg-gray-800 border border-gray-700 rounded-lg py-3 pl-10 pr-4 text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all"
@@ -109,8 +111,8 @@ function Login() {
             <label className="block text-sm font-medium text-gray-400 mb-2">Password</label>
             <div className="relative">
               <Lock className="absolute left-3 top-3 text-gray-500" size={20} />
-              <input 
-                type="password" 
+              <input
+                type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full bg-gray-800 border border-gray-700 rounded-lg py-3 pl-10 pr-4 text-white focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all"

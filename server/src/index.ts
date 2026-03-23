@@ -4,40 +4,79 @@ import dotenv from 'dotenv';
 import cors from 'cors';
 import Problem from './models/problems';
 import User from './models/User';
+import Contest from './models/Contest';
+import ContestParticipant from './models/ContestParticipant';
+import { hardcodedProblems } from './data/problems';
 
 dotenv.config();
 
 const app = express();
-app.use(cors());
+app.use(cors({
+  origin: process.env.CORS_ORIGIN || '*',
+  credentials: true
+}));
 app.use(express.json());
 
 const MONGO_URI = process.env.MONGO_URI || "";
 
+let dbConnected = false;
+
 // Database Connection
-mongoose.connect(MONGO_URI)
-  .then(() => console.log("✅ MongoDB Connected!"))
-  .catch((err) => console.log("❌ Connection Error:", err));
+if (MONGO_URI) {
+  mongoose.connect(MONGO_URI)
+    .then(() => { dbConnected = true; console.log("✅ MongoDB Connected!"); })
+    .catch((err) => { dbConnected = false; console.log("❌ Connection Error (using fallback data):", err.message); });
+} else {
+  console.log("⚠️ No MONGO_URI set. Running with hardcoded problem data only.");
+}
+
+// Generate stable fake IDs for hardcoded problems
+const hardcodedWithIds = hardcodedProblems.map((p, i) => ({
+  ...p,
+  _id: `hardcoded-${String(i + 1).padStart(3, '0')}`,
+}));
 
 // Route: Get All Problems
 app.get('/api/problems', async (req: Request, res: Response) => {
+  // If DB is not connected, serve hardcoded data instantly (no timeout wait)
+  if (!dbConnected) {
+    const listing = hardcodedWithIds.map(({ testbench, ...rest }) => rest);
+    return res.json(listing);
+  }
   try {
     const problems = await Problem.find().select('-testCases');
-    res.json(problems); // <--- Fixed: res.json is a function
+    if (problems.length > 0) {
+      res.json(problems);
+    } else {
+      const listing = hardcodedWithIds.map(({ testbench, ...rest }) => rest);
+      res.json(listing);
+    }
   } catch (error) {
-    res.status(500).json({ message: "Error fetching problems" });
+    const listing = hardcodedWithIds.map(({ testbench, ...rest }) => rest);
+    res.json(listing);
   }
 });
 
 // Route: Get Single Problem
 app.get('/api/problems/:id', async (req: Request, res: Response) => {
+  // If DB is not connected, serve from hardcoded data instantly
+  if (!dbConnected) {
+    const fallback = hardcodedWithIds.find(p => p._id === req.params.id);
+    if (fallback) return res.json(fallback);
+    return res.status(404).json({ message: "Problem not found" });
+  }
   try {
     const problem = await Problem.findById(req.params.id);
     if (!problem) {
+      const fallback = hardcodedWithIds.find(p => p._id === req.params.id);
+      if (fallback) { res.json(fallback); return; }
       res.status(404).json({ message: "Problem not found" });
       return;
     }
     res.json(problem);
   } catch (error) {
+    const fallback = hardcodedWithIds.find(p => p._id === req.params.id);
+    if (fallback) { res.json(fallback); return; }
     res.status(500).json({ message: "Error fetching problem details" });
   }
 });
@@ -57,23 +96,35 @@ app.post('/api/run', async (req, res) => {
   }
 
   try {
-    // 1. Find the problem in the DB
-    const problem = await Problem.findById(problemId);
+    // 1. Try to find problem in DB (only if connected), fall back to hardcoded
+    let problem = null;
+    if (dbConnected) {
+      try {
+        problem = await Problem.findById(problemId);
+      } catch (e) {
+        // DB error — ignore, try fallback
+      }
+    }
 
     if (!problem) {
-      return res.status(404).json({ output: "❌ Error: Problem not found." });
+      const fallback = hardcodedWithIds.find(p => p._id === problemId);
+      if (fallback) {
+        problem = fallback as any;
+      } else {
+        return res.status(404).json({ output: "❌ Error: Problem not found." });
+      }
     }
 
     // 2. Get the SPECIFIC testbench for this problem
     const testbench = problem.testbench;
 
     // 3. Run the code
-    const output = await runVerilog(code, testbench);
-    res.json({ output });
+    const result = await runVerilog(code, testbench);
+    res.json({ output: result.output, waveformData: result.waveformData });
 
   } catch (error) {
     console.error(error);
-    res.status(500).json({ output: "Server Error: Could not run code." });
+    res.status(500).json({ output: "Server Error: Could not run code.", waveformData: [] });
   }
 });
 app.post('/api/solve', async (req, res) => {
@@ -150,6 +201,7 @@ app.post('/api/google-login', async (req, res) => {
         _id: user._id,
         username: user.username,
         email: user.email,
+        profilePicture: user.profilePicture || '',
         solvedProblems: user.solvedProblems
       }
     });
@@ -159,7 +211,27 @@ app.post('/api/google-login', async (req, res) => {
     res.status(500).json({ error: "Server Error" });
   }
 });
-// 🔒 ADMIN ROUTE: Add a new Problem
+
+// UPDATE profile picture
+app.put('/api/users/:userId/profile-picture', async (req, res) => {
+  const { profilePicture } = req.body;
+
+  try {
+    const user = await User.findByIdAndUpdate(
+      req.params.userId,
+      { profilePicture },
+      { new: true }
+    ).select('-passwordHash');
+
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    res.json(user);
+  } catch (error) {
+    console.error('Error updating profile picture:', error);
+    res.status(500).json({ error: 'Server Error' });
+  }
+});
+
+// ADMIN ROUTE: Add a new Problem
 app.post('/api/problems', async (req, res) => {
   const { secret, title, description, difficulty, category, templateCode, driverCode, testbench } = req.body;
 
@@ -299,6 +371,160 @@ app.delete('/api/comments/:id', async (req, res) => {
     res.json({ success: true });
   } catch (error) {
     console.error("Error deleting comment:", error);
+    res.status(500).json({ error: "Server Error" });
+  }
+});
+
+// =========================================
+// CONTEST ROUTES
+// =========================================
+
+// 1. Create Contest (Admin)
+app.post('/api/contests', async (req, res) => {
+  const { title, description, startTime, durationMinutes, problems, difficulty, secret } = req.body;
+
+  if (secret !== "admin-123") return res.status(403).json({ error: "Unauthorized" });
+
+  try {
+    const start = new Date(startTime);
+    const end = new Date(start.getTime() + durationMinutes * 60000);
+
+    const contest = new Contest({
+      title,
+      description,
+      startTime: start,
+      endTime: end,
+      durationMinutes,
+      problems,
+      difficulty
+    });
+
+    await contest.save();
+    res.json(contest);
+  } catch (error) {
+    console.error("Error creating contest:", error);
+    res.status(500).json({ error: "Server Error" });
+  }
+});
+
+// 2. List Contests
+app.get('/api/contests', async (req, res) => {
+  try {
+    const now = new Date();
+    const contests = await Contest.find().sort({ startTime: 1 });
+
+    // Transform for frontend
+    const result = contests.map(c => {
+      let status = "Upcoming";
+      if (now >= c.startTime && now <= c.endTime) status = "Live";
+      else if (now > c.endTime) status = "Past";
+
+      return {
+        ...c.toObject(),
+        status
+      };
+    });
+
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: "Server Error" });
+  }
+});
+
+// 3. Get Contest Details
+app.get('/api/contests/:id', async (req, res) => {
+  try {
+    const contest = await Contest.findById(req.params.id).populate('problems');
+    if (!contest) return res.status(404).json({ error: "Contest not found" });
+
+    const now = new Date();
+
+    // If upcoming, hide problems!
+    if (now < contest.startTime) {
+      contest.problems = [];
+    }
+
+    res.json(contest);
+  } catch (error) {
+    res.status(500).json({ error: "Server Error" });
+  }
+});
+
+// 4. Join Contest (Register)
+app.post('/api/contests/:id/register', async (req, res) => {
+  const { userId, username } = req.body;
+
+  try {
+    // Check if already registered
+    const existing = await ContestParticipant.findOne({ contestId: req.params.id, userId });
+    if (existing) return res.json({ success: true, message: "Already registered" });
+
+    const participant = new ContestParticipant({
+      contestId: req.params.id,
+      userId,
+      username
+    });
+
+    await participant.save();
+
+    // Add to contest participant list
+    await Contest.findByIdAndUpdate(req.params.id, { $push: { participants: userId } });
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error("Error registering:", error);
+    res.status(500).json({ error: "Server Error" });
+  }
+});
+
+// 5. Submit Contest Problem
+app.post('/api/contests/:id/submit', async (req, res) => {
+  const { userId, problemId, passed } = req.body;
+  const contestId = req.params.id;
+
+  try {
+    const contest = await Contest.findById(contestId);
+    if (!contest) return res.status(404).json({ error: "Contest not found" });
+
+    const now = new Date();
+    if (now < contest.startTime || now > contest.endTime) {
+      return res.status(400).json({ error: "Contest is not active" });
+    }
+
+    let participant = await ContestParticipant.findOne({ contestId, userId });
+    if (!participant) return res.status(403).json({ error: "Not registered" });
+
+    // Initialize problem status if not present
+    if (!participant.problemStatus) participant.problemStatus = new Map();
+
+    // Get status
+    let status = participant.problemStatus.get(problemId);
+    if (!status) {
+      status = { solved: false, attempts: 0 };
+    }
+
+    // Update attempts
+    status.attempts += 1;
+
+    if (passed && !status.solved) {
+      status.solved = true;
+      status.solvedAt = now;
+      participant.score += 100; // Simple scoring: 100 pts per problem
+      participant.finishTime = now; // Update finish time to latest solve
+    }
+
+    // Set back to map
+    participant.problemStatus.set(problemId, status);
+
+    // Mark modified for Map
+    participant.markModified('problemStatus');
+
+    await participant.save();
+
+    res.json({ success: true, score: participant.score });
+
+  } catch (error) {
+    console.error("Contest submit error:", error);
     res.status(500).json({ error: "Server Error" });
   }
 });

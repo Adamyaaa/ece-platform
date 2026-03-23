@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { MessageSquare, ThumbsUp, User, Send, Trash2 } from 'lucide-react';
 import axios from 'axios';
+import { API_URL } from '../config';
 
 interface Comment {
     _id: string;
@@ -30,7 +31,7 @@ export default function DiscussionTab({ problemId }: Props) {
     // Fetch comments
     useEffect(() => {
         if (!problemId) return;
-        axios.get(`http://localhost:5000/api/comments/${problemId}`)
+        axios.get(`${API_URL}/api/comments/${problemId}`)
             .then(res => { setComments(res.data); setLoading(false); })
             .catch(err => { console.error(err); setLoading(false); });
     }, [problemId]);
@@ -41,7 +42,7 @@ export default function DiscussionTab({ problemId }: Props) {
         if (!newComment.trim() || !currentUserId || !currentUsername) return;
 
         try {
-            const res = await axios.post('http://localhost:5000/api/comments', {
+            const res = await axios.post(`${API_URL}/api/comments`, {
                 problemId,
                 userId: currentUserId,
                 username: currentUsername,
@@ -60,7 +61,7 @@ export default function DiscussionTab({ problemId }: Props) {
         if (!text.trim() || !currentUserId || !currentUsername) return;
 
         try {
-            const res = await axios.post('http://localhost:5000/api/comments', {
+            const res = await axios.post(`${API_URL}/api/comments`, {
                 problemId,
                 userId: currentUserId,
                 username: currentUsername,
@@ -78,7 +79,7 @@ export default function DiscussionTab({ problemId }: Props) {
         if (!currentUserId) return;
 
         try {
-            const res = await axios.post(`http://localhost:5000/api/comments/${commentId}/like`, {
+            const res = await axios.post(`${API_URL}/api/comments/${commentId}/like`, {
                 userId: currentUserId,
             });
             setComments(comments.map(c => c._id === commentId ? res.data : c));
@@ -92,7 +93,7 @@ export default function DiscussionTab({ problemId }: Props) {
         if (!window.confirm("Are you sure you want to delete this comment?")) return;
 
         try {
-            await axios.delete(`http://localhost:5000/api/comments/${commentId}`, {
+            await axios.delete(`${API_URL}/api/comments/${commentId}`, {
                 data: { userId: currentUserId, secret: adminKey }
             });
             // Remove the deleted comment and its replies from state

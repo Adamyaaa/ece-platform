@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
+import { API_URL } from './config';
 import Editor from "@monaco-editor/react";
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
-import { Play, RotateCcw, CheckCircle, XCircle, Terminal, GripVertical, GripHorizontal } from 'lucide-react';
+import { Play, RotateCcw, CheckCircle, XCircle, Terminal, GripVertical, GripHorizontal, Activity } from 'lucide-react';
 import DiscussionTab from './components/DiscussionTab';
+import WaveformViewer from './components/WaveformViewer';
 
 interface Problem {
   title: string;
@@ -23,10 +25,12 @@ function ProblemPage() {
   const [userCode, setUserCode] = useState("");
   const [output, setOutput] = useState("");
   const [isRunning, setIsRunning] = useState(false);
+  const [waveformData, setWaveformData] = useState<string[]>([]);
+  const [bottomTab, setBottomTab] = useState<'console' | 'waveform'>('console');
 
   // 1. Fetch Data Hook
   useEffect(() => {
-    axios.get(`http://localhost:5000/api/problems/${id}`)
+    axios.get(`${API_URL}/api/problems/${id}`)
       .then((res) => {
         setProblem(res.data);
         setUserCode(res.data.templateCode || "");
@@ -38,14 +42,16 @@ function ProblemPage() {
   const handleRunCode = async () => {
     setIsRunning(true);
     setOutput("Compiling and Simulating...");
+    setWaveformData([]);
 
     try {
-      const response = await axios.post('http://localhost:5000/api/run', {
+      const response = await axios.post(`${API_URL}/api/run`, {
         code: userCode,
         problemId: id
       });
 
       let rawOutput = response.data.output;
+      const waveLines: string[] = response.data.waveformData || [];
 
       // 🧹 CLEANUP: Remove file paths, system noise, AND the $finish message
       let cleanOutput = rawOutput
@@ -55,12 +61,18 @@ function ProblemPage() {
         .trim(); // Removes extra whitespace
 
       setOutput(cleanOutput);
+      setWaveformData(waveLines);
+
+      // Auto-switch to waveform tab if data is available
+      if (waveLines.length > 0) {
+        setBottomTab('waveform');
+      }
 
       // Check for success
       if (cleanOutput.includes("Passed") && !cleanOutput.includes("Failed")) {
         const userId = localStorage.getItem("userId");
         if (userId) {
-          await axios.post('http://localhost:5000/api/solve', { userId, problemId: id });
+          await axios.post(`${API_URL}/api/solve`, { userId, problemId: id });
         }
       }
 
@@ -213,15 +225,35 @@ function ProblemPage() {
               <GripHorizontal size={12} className="text-gray-600" />
             </PanelResizeHandle>
 
-            {/* BOTTOM RIGHT: Terminal */}
+            {/* BOTTOM RIGHT: Terminal + Waveform */}
             <Panel defaultSize={30} minSize={10} className="flex flex-col bg-black">
               <div className="px-4 py-2 bg-[#1a1a1a] border-b border-gray-800 flex justify-between items-center">
-                <span className="text-xs font-mono text-gray-400 flex items-center gap-2">
-                  <Terminal size={12} /> Console Output
-                </span>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => setBottomTab('console')}
+                    className={`text-xs font-mono flex items-center gap-1.5 px-2.5 py-1 rounded transition-colors ${bottomTab === 'console'
+                        ? 'text-white bg-gray-700/60'
+                        : 'text-gray-500 hover:text-gray-300'
+                      }`}
+                  >
+                    <Terminal size={12} /> Console
+                  </button>
+                  <button
+                    onClick={() => setBottomTab('waveform')}
+                    className={`text-xs font-mono flex items-center gap-1.5 px-2.5 py-1 rounded transition-colors ${bottomTab === 'waveform'
+                        ? 'text-white bg-gray-700/60'
+                        : 'text-gray-500 hover:text-gray-300'
+                      }`}
+                  >
+                    <Activity size={12} /> Waveform
+                    {waveformData.length > 0 && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                    )}
+                  </button>
+                </div>
 
                 {/* 🟢 REFINED LOGIC: Only show badge if NOT running AND output exists */}
-                {!isRunning && output && (
+                {!isRunning && output && bottomTab === 'console' && (
                   <span className={`text-xs font-bold flex items-center gap-1 ${output.includes("Passed") ? "text-green-500" : "text-red-400"
                     }`}>
                     {output.includes("Passed") ? <CheckCircle size={12} /> : <XCircle size={12} />}
@@ -230,9 +262,13 @@ function ProblemPage() {
                 )}
               </div>
 
-              <pre className="flex-1 p-4 font-mono text-sm overflow-y-auto text-gray-300 custom-scrollbar">
-                {output || <span className="text-gray-600 italic">// Run your code to see results...</span>}
-              </pre>
+              {bottomTab === 'console' ? (
+                <pre className="flex-1 p-4 font-mono text-sm overflow-y-auto text-gray-300 custom-scrollbar">
+                  {output || <span className="text-gray-600 italic">// Run your code to see results...</span>}
+                </pre>
+              ) : (
+                <WaveformViewer rawLines={waveformData} />
+              )}
             </Panel>
 
           </PanelGroup>

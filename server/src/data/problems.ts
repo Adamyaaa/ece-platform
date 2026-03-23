@@ -1,9 +1,3 @@
-import mongoose from 'mongoose';
-import Problem from './models/problems';
-import dotenv from 'dotenv';
-
-dotenv.config();
-
 // Helper to save space on simple gates
 const gateTB = (mod: string, expr: string) => `
   module test;
@@ -19,7 +13,7 @@ const gateTB = (mod: string, expr: string) => `
   endmodule
 `;
 
-const problems = [
+export const hardcodedProblems = [
   // =========================================
   // LEVEL 1: BASICS (1-5)
   // =========================================
@@ -397,74 +391,3 @@ const problems = [
     `
   }
 ];
-
-import Contest from './models/Contest';
-import ContestParticipant from './models/ContestParticipant';
-
-const seedDB = async () => {
-  try {
-    const uri = process.env.MONGO_URI || "mongodb://localhost:27017/vericode";
-    console.log(`🔥 Connecting to: ${uri.substring(0, 20)}...`);
-    await mongoose.connect(uri);
-    console.log("🔥 Connected. Wiping old data...");
-
-    await Problem.deleteMany({});
-    await Contest.deleteMany({});
-    await ContestParticipant.deleteMany({});
-
-    console.log("🌱 Seeding 20 Perfect Problems...");
-    const createdProblems = await Problem.insertMany(problems);
-    console.log(`✅ Created ${createdProblems.length} problems.`);
-
-    // =========================================
-    // SEED CONTESTS
-    // =========================================
-    const now = new Date();
-
-    // 1. LIVE CONTEST (Started 10 mins ago, ends in 50 mins)
-    const liveContest = new Contest({
-      title: "Digital Logic Speedrun",
-      description: "60 minutes to solve 3 fundamental logic problems. Prove your speed.",
-      startTime: new Date(now.getTime() - 10 * 60000),
-      endTime: new Date(now.getTime() + 50 * 60000),
-      durationMinutes: 60,
-      problems: [createdProblems[0]._id, createdProblems[1]._id, createdProblems[2]._id], // AND, OR, NOT
-      difficulty: "Beginner",
-      participants: []
-    });
-
-    // 2. UPCOMING CONTEST (Starts in 2 hours)
-    const upcomingContest = new Contest({
-      title: "Combinational Design Exam",
-      description: "Advanced arithmetic circuits. Half Adders, Full Adders, and Muxes.",
-      startTime: new Date(now.getTime() + 120 * 60000),
-      endTime: new Date(now.getTime() + 180 * 60000),
-      durationMinutes: 60,
-      problems: [createdProblems[5]._id, createdProblems[6]._id, createdProblems[7]._id], // HA, FA, Mux
-      difficulty: "Intermediate",
-      participants: []
-    });
-
-    // 3. PAST CONTEST (Ended yesterday)
-    const pastContest = new Contest({
-      title: "Verilog 101: Hello World",
-      description: "The very first contest. Basic gates only.",
-      startTime: new Date(now.getTime() - 24 * 60 * 60000),
-      endTime: new Date(now.getTime() - 23 * 60 * 60000),
-      durationMinutes: 60,
-      problems: [createdProblems[0]._id, createdProblems[3]._id],
-      difficulty: "Beginner",
-      participants: []
-    });
-
-    await Contest.insertMany([liveContest, upcomingContest, pastContest]);
-    console.log("🏆 Seeded 3 Contests (Live, Upcoming, Past)");
-
-    mongoose.connection.close();
-  } catch (error) {
-    console.error("❌ Error:", error);
-    process.exit(1);
-  }
-};
-
-seedDB();

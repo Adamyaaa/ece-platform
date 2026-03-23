@@ -22,9 +22,14 @@ function Navbar() {
       localStorage.removeItem('userId');
       localStorage.removeItem('username');
       localStorage.removeItem('token');
+      localStorage.removeItem('profilePicture');
       navigate('/'); // Go home after logout
     });
   };
+
+  const profilePicture = localStorage.getItem('profilePicture');
+  const displayName = user?.displayName?.split(' ')[0] || localStorage.getItem('username') || "User";
+  const firstLetter = displayName.charAt(0).toUpperCase();
 
   return (
     <nav className="bg-gray-900 border-b border-gray-800 p-4 sticky top-0 z-50">
@@ -44,8 +49,6 @@ function Navbar() {
           <Link to="/problems" className="text-gray-300 hover:text-white hover:text-shadow-glow transition-all">Problem Bank</Link>
           <Link to="/contests" className="text-gray-300 hover:text-white hover:text-shadow-glow transition-all">Contests</Link>
           <Link to="/blogs" className="text-gray-300 hover:text-white hover:text-shadow-glow transition-all">Blogs</Link>
-          <Link to="/roadmap" className="text-gray-300 hover:text-white hover:text-shadow-glow transition-all">Roadmap</Link>
-          {/* Admin Link - Visible for now (Ideally check for admin role) */}
           <Link to="/admin" className="text-red-400 hover:text-red-300 font-bold border border-red-500/30 px-3 py-1 rounded hover:bg-red-500/10 transition-all">
             Admin
           </Link>
@@ -54,17 +57,16 @@ function Navbar() {
         {/* Right Side: Auth Logic */}
         <div className="flex items-center gap-4">
           {user ? (
-            // SHOW THIS IF LOGGED IN
             <>
               <Link to="/profile" className="flex items-center gap-2 text-gray-300 hover:text-white transition-colors">
-                {user.photoURL ? (
-                  <img src={user.photoURL} alt="Profile" className="w-8 h-8 rounded-full border border-gray-600" />
+                {profilePicture ? (
+                  <img src={profilePicture} alt="Profile" className="w-8 h-8 rounded-full border border-gray-600 object-cover" />
                 ) : (
-                  <div className="bg-gray-700 p-1.5 rounded-full">
-                    <User size={20} />
+                  <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-sm border border-blue-500/50">
+                    {firstLetter}
                   </div>
                 )}
-                <span className="font-medium hidden sm:block">{user.displayName?.split(' ')[0] || "User"}</span>
+                <span className="font-medium hidden sm:block">{displayName}</span>
               </Link>
 
               <button
@@ -76,7 +78,6 @@ function Navbar() {
               </button>
             </>
           ) : (
-            // SHOW THIS IF LOGGED OUT
             <>
               <Link to="/login" className="text-gray-300 hover:text-white font-medium">Log In</Link>
               <Link to="/signup" className="bg-blue-600 hover:bg-blue-500 text-white px-5 py-2 rounded-full font-medium transition-all">

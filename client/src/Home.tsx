@@ -31,9 +31,6 @@ function Home() {
           <Link to="/problems" className="btn-primary group">
             Start Coding Now <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
           </Link>
-          <Link to="/roadmap" className="btn-secondary">
-            View Learning Path
-          </Link>
         </div>
 
         {/* Dashboard Preview (Glass Card) */}
@@ -79,7 +76,7 @@ function Home() {
           <FeatureCard
             icon={<BookOpen className="text-purple-400" size={32} />}
             title="Interactive Learning"
-            desc="Curated roadmaps guiding you from basic logic gates to advanced RISC-V processor design."
+            desc="Structured curriculum guiding you from basic logic gates to advanced RISC-V processor design."
           />
         </div>
       </section>
@@ -110,7 +107,7 @@ function Home() {
               <ul className="space-y-3">
                 <li><Link to="/problems" className="text-gray-400 text-sm hover:text-white transition-colors">Problem Bank</Link></li>
                 <li><Link to="/contests" className="text-gray-400 text-sm hover:text-white transition-colors">Contests</Link></li>
-                <li><Link to="/roadmap" className="text-gray-400 text-sm hover:text-white transition-colors">Learning Roadmap</Link></li>
+
                 <li><Link to="/blogs" className="text-gray-400 text-sm hover:text-white transition-colors">Blogs</Link></li>
               </ul>
             </div>

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { API_URL } from './config';
 import { Shield, Plus, Save, Terminal, Code, Trash2 } from 'lucide-react';
 
 interface Problem {
@@ -27,7 +28,7 @@ function AdminDashboard() {
 
   // Fetch existing problems
   useEffect(() => {
-    axios.get('http://localhost:5000/api/problems')
+    axios.get(`${API_URL}/api/problems`)
       .then(res => setProblems(res.data))
       .catch(err => console.error(err));
   }, []);
@@ -41,7 +42,7 @@ function AdminDashboard() {
     setStatus("⏳ Saving...");
 
     try {
-      await axios.post('http://localhost:5000/api/problems', {
+      await axios.post(`${API_URL}/api/problems`, {
         ...formData,
         secret: secret // Send the key for verification
       });
@@ -213,7 +214,7 @@ function AdminDashboard() {
                       if (!secret) { setDeleteStatus('Enter the Admin Key above first.'); return; }
                       if (!window.confirm(`Delete "${p.title}"? This cannot be undone.`)) return;
                       try {
-                        await axios.delete(`http://localhost:5000/api/problems/${p._id}`, { data: { secret } });
+                        await axios.delete(`${API_URL}/api/problems/${p._id}`, { data: { secret } });
                         setProblems(prev => prev.filter(x => x._id !== p._id));
                         setDeleteStatus(`Deleted: ${p.title}`);
                       } catch (err: any) {
