@@ -1,6 +1,6 @@
 import React, { Suspense } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import Navbar from './Navbar';
+import Navbar from './navbar';
 
 // Lazy Load Pages for Performance
 const Home = React.lazy(() => import('./Home'));
