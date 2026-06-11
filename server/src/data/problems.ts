@@ -1,3 +1,26 @@
+export const STABLE_IDS = [
+  "698738da85f5b306c4c3c861", // 01. Basic AND Gate
+  "698738da85f5b306c4c3c862", // 02. Basic OR Gate
+  "698738da85f5b306c4c3c863", // 03. NOT Gate
+  "698738da85f5b306c4c3c864", // 04. XOR Gate
+  "698738da85f5b306c4c3c865", // 05. NAND Gate
+  "698738da85f5b306c4c3c866", // 06. Half Adder
+  "698738da85f5b306c4c3c867", // 07. Full Adder
+  "698738da85f5b306c4c3c868", // 08. 2:1 Multiplexer
+  "698738da85f5b306c4c3c869", // 09. 4-bit Comparator
+  "698738da85f5b306c4c3c86a", // 10. 2-to-4 Decoder
+  "698738da85f5b306c4c3c86b", // 11. 4-bit Ripple Carry Adder
+  "698738da85f5b306c4c3c86c", // 12. BCD to 7-Segment
+  "698738da85f5b306c4c3c86d", // 13. D Flip-Flop
+  "698738da85f5b306c4c3c86e", // 14. T Flip-Flop
+  "698738da85f5b306c4c3c86f", // 15. 4-bit Up Counter
+  "698738da85f5b306c4c3c870", // 16. Clock Divider by 2
+  "698e38d7be414817c8a85cd1", // 17. Left Shift Register
+  "698738da85f5b306c4c3c872", // 18. Sequence Detector (101)
+  "698e38d7be414817c8a85cd3", // 19. Traffic Light Controller
+  "698738da85f5b306c4c3c874", // 20. Simple ALU
+];
+
 // Helper to save space on simple gates
 const gateTB = (mod: string, expr: string) => `
   module test;

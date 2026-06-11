@@ -7,6 +7,8 @@ const Home = React.lazy(() => import('./Home'));
 const ProblemBank = React.lazy(() => import('./ProblemBank'));
 const ProblemPage = React.lazy(() => import('./ProblemPage'));
 const BlogPage = React.lazy(() => import('./BlogPage'));
+const BlogDetail = React.lazy(() => import('./BlogDetail'));
+const CreateBlog = React.lazy(() => import('./CreateBlog'));
 const ContestList = React.lazy(() => import('./ContestList'));
 const ContestPage = React.lazy(() => import('./ContestPage'));
 const Profile = React.lazy(() => import('./Profile'));
@@ -33,6 +35,8 @@ function App() {
             <Route path="/problems" element={<ProblemBank />} />
             <Route path="/problems/:id" element={<ProblemPage />} />
             <Route path="/blogs" element={<BlogPage />} />
+            <Route path="/blogs/create" element={<CreateBlog />} />
+            <Route path="/blogs/:id" element={<BlogDetail />} />
 
             <Route path="/contests" element={<ContestList />} />
             <Route path="/contest/:id" element={<ContestPage />} />

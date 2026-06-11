@@ -1,12 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { API_URL } from './config';
-import { Shield, Plus, Save, Terminal, Code, Trash2 } from 'lucide-react';
+import { Shield, Plus, Save, Terminal, Code, Trash2, Newspaper, ExternalLink } from 'lucide-react';
 
 interface Problem {
   _id: string;
   title: string;
   difficulty: string;
+}
+
+interface ArticleItem {
+  _id: string;
+  title: string;
+  url: string;
+  source: string;
+  summary: string;
+  tags: string[];
 }
 
 function AdminDashboard() {
@@ -15,10 +24,10 @@ function AdminDashboard() {
   const [formData, setFormData] = useState({
     title: "",
     difficulty: "Easy",
-    category: "Digital Logic", // Added category default
+    category: "Digital Logic",
     description: "",
     templateCode: "module top_module( input a, input b, output out );\n    // Your code\nendmodule",
-    driverCode: "", // Optional (for advanced testbenches)
+    driverCode: "",
     testbench: "module test;\n  // Write Verilog test cases here\nendmodule"
   });
 
@@ -26,10 +35,18 @@ function AdminDashboard() {
   const [problems, setProblems] = useState<Problem[]>([]);
   const [deleteStatus, setDeleteStatus] = useState("");
 
+  // Article state
+  const [articles, setArticles] = useState<ArticleItem[]>([]);
+  const [articleForm, setArticleForm] = useState({ title: '', url: '', source: 'GeeksForGeeks', summary: '', tags: '' });
+  const [articleStatus, setArticleStatus] = useState('');
+
   // Fetch existing problems
   useEffect(() => {
     axios.get(`${API_URL}/api/problems`)
       .then(res => setProblems(res.data))
+      .catch(err => console.error(err));
+    axios.get(`${API_URL}/api/articles`)
+      .then(res => setArticles(res.data))
       .catch(err => console.error(err));
   }, []);
 
@@ -44,12 +61,29 @@ function AdminDashboard() {
     try {
       await axios.post(`${API_URL}/api/problems`, {
         ...formData,
-        secret: secret // Send the key for verification
+        secret: secret
       });
       setStatus("✅ Problem Published Successfully!");
-      // Optional: Clear form
     } catch (err: any) {
       setStatus("❌ Error: " + (err.response?.data?.error || err.message));
+    }
+  };
+
+  const handleAddArticle = async () => {
+    if (!secret) { setArticleStatus('Enter Admin Key above first.'); return; }
+    if (!articleForm.title || !articleForm.url) { setArticleStatus('Title and URL required.'); return; }
+    setArticleStatus('⏳ Adding...');
+    try {
+      const res = await axios.post(`${API_URL}/api/articles`, {
+        ...articleForm,
+        tags: articleForm.tags.split(',').map(t => t.trim()).filter(Boolean),
+        secret,
+      });
+      setArticles(prev => [res.data, ...prev]);
+      setArticleForm({ title: '', url: '', source: 'GeeksForGeeks', summary: '', tags: '' });
+      setArticleStatus('✅ Article added!');
+    } catch (err: any) {
+      setArticleStatus('❌ ' + (err.response?.data?.error || err.message));
     }
   };
 
@@ -105,7 +139,7 @@ function AdminDashboard() {
             <label className="text-xs font-bold text-gray-500 uppercase">Category</label>
             <select
               name="category"
-              value={formData.category} // @ts-ignore
+              value={formData.category}
               onChange={handleChange}
               className="w-full bg-[#111] border border-gray-800 rounded p-3 focus:border-blue-500 outline-none text-white"
             >
@@ -142,8 +176,6 @@ function AdminDashboard() {
 
           {/* 2. Code Sections */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
-            {/* Template Code */}
             <div className="space-y-2">
               <label className="flex items-center gap-2 text-xs font-bold text-blue-400 uppercase">
                 <Code size={14} /> Student Template
@@ -156,8 +188,6 @@ function AdminDashboard() {
                 className="w-full bg-[#0a0a0a] border border-gray-800 rounded p-3 focus:border-blue-500 outline-none text-gray-300 font-mono text-xs leading-relaxed"
               />
             </div>
-
-            {/* Testbench */}
             <div className="space-y-2">
               <label className="flex items-center gap-2 text-xs font-bold text-green-400 uppercase">
                 <Terminal size={14} /> Validation Testbench
@@ -177,7 +207,6 @@ function AdminDashboard() {
             <div className={`font-bold ${status.includes("Error") ? "text-red-500" : "text-green-500"}`}>
               {status}
             </div>
-
             <button
               type="submit"
               className="bg-white text-black hover:bg-gray-200 px-8 py-3 rounded font-bold flex items-center gap-2 transition-transform active:scale-95"
@@ -231,9 +260,102 @@ function AdminDashboard() {
             )}
           </div>
         </div>
+
+        {/* ===== CURATED ARTICLES SECTION ===== */}
+        <div className="mt-12 border-t border-gray-800 pt-8">
+          <div className="flex items-center gap-3 mb-6">
+            <Newspaper className="text-purple-400" size={20} />
+            <h2 className="text-xl font-bold text-gray-200">Curated Articles</h2>
+          </div>
+
+          {/* Add Article Form */}
+          <div className="bg-[#111] border border-gray-800 rounded-xl p-5 mb-6 space-y-4">
+            <h3 className="text-sm font-bold text-gray-400 uppercase">Add External Article</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <input
+                placeholder="Article Title"
+                value={articleForm.title}
+                onChange={e => setArticleForm({ ...articleForm, title: e.target.value })}
+                className="w-full bg-[#0a0a0a] border border-gray-800 rounded p-2.5 text-sm text-white outline-none focus:border-purple-500"
+              />
+              <input
+                placeholder="URL (https://...)"
+                value={articleForm.url}
+                onChange={e => setArticleForm({ ...articleForm, url: e.target.value })}
+                className="w-full bg-[#0a0a0a] border border-gray-800 rounded p-2.5 text-sm text-white outline-none focus:border-purple-500"
+              />
+              <select
+                value={articleForm.source}
+                onChange={e => setArticleForm({ ...articleForm, source: e.target.value })}
+                className="w-full bg-[#0a0a0a] border border-gray-800 rounded p-2.5 text-sm text-white outline-none focus:border-purple-500"
+              >
+                <option>GeeksForGeeks</option>
+                <option>IEEE</option>
+                <option>Semiconductor Engineering</option>
+                <option>EE Times</option>
+                <option>All About Circuits</option>
+                <option>Other</option>
+              </select>
+              <input
+                placeholder="Tags (comma separated: VLSI, FPGA)"
+                value={articleForm.tags}
+                onChange={e => setArticleForm({ ...articleForm, tags: e.target.value })}
+                className="w-full bg-[#0a0a0a] border border-gray-800 rounded p-2.5 text-sm text-white outline-none focus:border-purple-500"
+              />
+            </div>
+            <input
+              placeholder="Short summary (optional)"
+              value={articleForm.summary}
+              onChange={e => setArticleForm({ ...articleForm, summary: e.target.value })}
+              className="w-full bg-[#0a0a0a] border border-gray-800 rounded p-2.5 text-sm text-white outline-none focus:border-purple-500"
+            />
+            <div className="flex items-center justify-between">
+              {articleStatus && <span className={`text-sm font-bold ${articleStatus.includes('❌') ? 'text-red-500' : 'text-green-500'}`}>{articleStatus}</span>}
+              <button
+                onClick={handleAddArticle}
+                className="ml-auto bg-purple-600 hover:bg-purple-500 text-white px-5 py-2 rounded font-bold text-sm flex items-center gap-2 transition-all"
+              >
+                <Plus size={14} /> Add Article
+              </button>
+            </div>
+          </div>
+
+          {/* Article List */}
+          <div className="space-y-2">
+            {articles.length === 0 ? (
+              <p className="text-gray-500 text-sm">No curated articles yet.</p>
+            ) : (
+              articles.map(a => (
+                <div key={a._id} className="flex items-center justify-between bg-[#0c0c0c] border border-gray-800 rounded-lg px-4 py-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <span className="text-[10px] font-bold uppercase tracking-wider bg-purple-600/20 text-purple-400 px-2 py-0.5 rounded border border-purple-600/30 shrink-0">{a.source}</span>
+                    <a href={a.url} target="_blank" rel="noopener noreferrer" className="text-gray-300 font-medium text-sm truncate hover:text-purple-400 transition-colors flex items-center gap-1">
+                      {a.title} <ExternalLink size={10} className="shrink-0 opacity-50" />
+                    </a>
+                  </div>
+                  <button
+                    onClick={async () => {
+                      if (!secret) { setArticleStatus('Enter Admin Key first.'); return; }
+                      if (!window.confirm(`Delete article "${a.title}"?`)) return;
+                      try {
+                        await axios.delete(`${API_URL}/api/articles/${a._id}`, { data: { secret } });
+                        setArticles(prev => prev.filter(x => x._id !== a._id));
+                      } catch (err: any) {
+                        setArticleStatus('❌ ' + (err.response?.data?.error || err.message));
+                      }
+                    }}
+                    className="text-gray-500 hover:text-red-400 transition-colors p-2 rounded hover:bg-red-500/10 shrink-0"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
 }
 
-export default AdminDashboard;
+export default AdminDashboard;

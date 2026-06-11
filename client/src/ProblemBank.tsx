@@ -173,7 +173,7 @@ function ProblemBank() {
                   <div className="flex items-center gap-2">
                     <h3 className={`font-semibold text-sm truncate transition-colors ${isSolved ? 'text-gray-300 group-hover:text-green-400' : 'text-gray-200 group-hover:text-blue-400'
                       }`}>
-                      {problem.title}
+                      {problem.title.replace(/^\d+\.\s*/, '')}
                     </h3>
                   </div>
                   <p className="text-gray-600 text-xs mt-0.5 truncate">{problem.description}</p>

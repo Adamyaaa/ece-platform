@@ -6,7 +6,9 @@ import Problem from './models/problems';
 import User from './models/User';
 import Contest from './models/Contest';
 import ContestParticipant from './models/ContestParticipant';
-import { hardcodedProblems } from './data/problems';
+import Blog from './models/Blog';
+import Article from './models/Article';
+import { hardcodedProblems, STABLE_IDS } from './data/problems';
 
 dotenv.config();
 
@@ -21,10 +23,32 @@ const MONGO_URI = process.env.MONGO_URI || "";
 
 let dbConnected = false;
 
+// Auto-seed function
+async function autoSeedProblems() {
+  try {
+    const count = await Problem.countDocuments();
+    if (count === 0) {
+      console.log("🌱 Database is connected but empty. Auto-seeding 20 default coding problems...");
+      const problemsWithIds = hardcodedProblems.map((prob, index) => ({
+        ...prob,
+        _id: new mongoose.Types.ObjectId(STABLE_IDS[index])
+      }));
+      await Problem.insertMany(problemsWithIds);
+      console.log("🌱 Auto-seeding completed successfully!");
+    }
+  } catch (err: any) {
+    console.error("⚠️ Failed to auto-seed database:", err.message);
+  }
+}
+
 // Database Connection
 if (MONGO_URI) {
   mongoose.connect(MONGO_URI)
-    .then(() => { dbConnected = true; console.log("✅ MongoDB Connected!"); })
+    .then(async () => {
+      dbConnected = true;
+      console.log("✅ MongoDB Connected!");
+      await autoSeedProblems();
+    })
     .catch((err) => { dbConnected = false; console.log("❌ Connection Error (using fallback data):", err.message); });
 } else {
   console.log("⚠️ No MONGO_URI set. Running with hardcoded problem data only.");
@@ -44,14 +68,10 @@ app.get('/api/problems', async (req: Request, res: Response) => {
     return res.json(listing);
   }
   try {
-    const problems = await Problem.find().select('-testCases');
-    if (problems.length > 0) {
-      res.json(problems);
-    } else {
-      const listing = hardcodedWithIds.map(({ testbench, ...rest }) => rest);
-      res.json(listing);
-    }
+    const problems = await Problem.find().select('-testbench');
+    res.json(problems);
   } catch (error) {
+    console.error("Error fetching problems from database, using fallback:", error);
     const listing = hardcodedWithIds.map(({ testbench, ...rest }) => rest);
     res.json(listing);
   }
@@ -529,5 +549,260 @@ app.post('/api/contests/:id/submit', async (req, res) => {
   }
 });
 
+// =========================================
+// BLOG ROUTES
+// =========================================
+
+// GET all blogs (newest first)
+app.get('/api/blogs', async (req, res) => {
+  try {
+    const blogs = await Blog.find().sort({ createdAt: -1 });
+    res.json(blogs);
+  } catch (error) {
+    console.error('Error fetching blogs:', error);
+    res.status(500).json({ error: 'Server Error' });
+  }
+});
+
+// GET single blog
+app.get('/api/blogs/:id', async (req, res) => {
+  try {
+    const blog = await Blog.findById(req.params.id);
+    if (!blog) return res.status(404).json({ error: 'Blog not found' });
+    res.json(blog);
+  } catch (error) {
+    console.error('Error fetching blog:', error);
+    res.status(500).json({ error: 'Server Error' });
+  }
+});
+
+// CREATE a blog (requires userId)
+app.post('/api/blogs', async (req, res) => {
+  const { title, content, tags, authorId, authorName, authorEmail } = req.body;
+
+  if (!title || !content || !authorId || !authorName) {
+    return res.status(400).json({ error: 'Missing required fields (title, content, authorId, authorName)' });
+  }
+
+  try {
+    // Auto-generate summary from first 150 chars of content
+    const plainText = content.replace(/[#*`>\-\[\]()!]/g, '').trim();
+    const summary = plainText.substring(0, 150) + (plainText.length > 150 ? '...' : '');
+
+    const blog = new Blog({
+      title,
+      content,
+      summary,
+      authorId,
+      authorName,
+      authorEmail: authorEmail || '',
+      tags: tags || [],
+    });
+
+    await blog.save();
+    console.log(`📝 New blog created: "${title}" by ${authorName}`);
+    res.json(blog);
+  } catch (error) {
+    console.error('Error creating blog:', error);
+    res.status(500).json({ error: 'Server Error' });
+  }
+});
+
+// UPDATE a blog (author only)
+app.put('/api/blogs/:id', async (req, res) => {
+  const { title, content, tags, authorId } = req.body;
+
+  try {
+    const blog = await Blog.findById(req.params.id);
+    if (!blog) return res.status(404).json({ error: 'Blog not found' });
+    if (blog.authorId !== authorId) return res.status(403).json({ error: 'Not authorized' });
+
+    if (title) blog.title = title;
+    if (content) {
+      blog.content = content;
+      const plainText = content.replace(/[#*`>\-\[\]()!]/g, '').trim();
+      blog.summary = plainText.substring(0, 150) + (plainText.length > 150 ? '...' : '');
+    }
+    if (tags) blog.tags = tags;
+
+    await blog.save();
+    res.json(blog);
+  } catch (error) {
+    console.error('Error updating blog:', error);
+    res.status(500).json({ error: 'Server Error' });
+  }
+});
+
+// DELETE a blog (author or admin)
+app.delete('/api/blogs/:id', async (req, res) => {
+  const { userId, secret } = req.body;
+
+  try {
+    const blog = await Blog.findById(req.params.id);
+    if (!blog) return res.status(404).json({ error: 'Blog not found' });
+
+    const isAuthor = userId && blog.authorId === userId;
+    const isAdmin = secret === 'admin-123';
+
+    if (!isAuthor && !isAdmin) {
+      return res.status(403).json({ error: 'Not authorized to delete this blog' });
+    }
+
+    await Blog.findByIdAndDelete(req.params.id);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting blog:', error);
+    res.status(500).json({ error: 'Server Error' });
+  }
+});
+
+// TOGGLE like on a blog
+app.post('/api/blogs/:id/like', async (req, res) => {
+  const { userId } = req.body;
+  if (!userId) return res.status(400).json({ error: 'Missing userId' });
+
+  try {
+    const blog = await Blog.findById(req.params.id);
+    if (!blog) return res.status(404).json({ error: 'Blog not found' });
+
+    const index = blog.likes.indexOf(userId);
+    if (index === -1) {
+      blog.likes.push(userId);
+    } else {
+      blog.likes.splice(index, 1);
+    }
+    await blog.save();
+    res.json({ likes: blog.likes });
+  } catch (error) {
+    console.error('Error toggling like:', error);
+    res.status(500).json({ error: 'Server Error' });
+  }
+});
+
+// =========================================
+// CURATED ARTICLE ROUTES
+// =========================================
+
+// GET all curated articles
+app.get('/api/articles', async (req, res) => {
+  try {
+    const articles = await Article.find().sort({ addedAt: -1 });
+    res.json(articles);
+  } catch (error) {
+    console.error('Error fetching articles:', error);
+    res.status(500).json({ error: 'Server Error' });
+  }
+});
+
+// ADD a curated article (Admin)
+app.post('/api/articles', async (req, res) => {
+  const { title, summary, url, source, tags, secret } = req.body;
+
+  if (secret !== 'admin-123') return res.status(403).json({ error: 'Unauthorized' });
+  if (!title || !url || !source) return res.status(400).json({ error: 'Missing required fields' });
+
+  try {
+    const article = new Article({ title, summary: summary || '', url, source, tags: tags || [] });
+    await article.save();
+    console.log(`📰 Article added: "${title}" from ${source}`);
+    res.json(article);
+  } catch (error) {
+    console.error('Error adding article:', error);
+    res.status(500).json({ error: 'Server Error' });
+  }
+});
+
+// DELETE a curated article (Admin)
+app.delete('/api/articles/:id', async (req, res) => {
+  const { secret } = req.body;
+  if (secret !== 'admin-123') return res.status(403).json({ error: 'Unauthorized' });
+
+  try {
+    const article = await Article.findByIdAndDelete(req.params.id);
+    if (!article) return res.status(404).json({ error: 'Article not found' });
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting article:', error);
+    res.status(500).json({ error: 'Server Error' });
+  }
+});
+// =========================================
+// AUTO-FETCHED RSS FEED ARTICLES
+// =========================================
+import RSSParser from 'rss-parser';
+
+const rssParser = new RSSParser();
+
+// RSS feed sources for ECE/electronics content
+const RSS_FEEDS = [
+  { url: 'https://spectrum.ieee.org/feeds/feed.rss', source: 'IEEE Spectrum' },
+  { url: 'https://www.eetimes.com/feed/', source: 'EE Times' },
+  { url: 'https://hackaday.com/feed/', source: 'Hackaday' },
+  { url: 'https://www.allaboutcircuits.com/feeds/articles.xml', source: 'All About Circuits' },
+];
+
+// In-memory cache: { articles: [], lastFetched: Date }
+let feedCache: { articles: any[]; lastFetched: number } = { articles: [], lastFetched: 0 };
+const CACHE_TTL = 60 * 60 * 1000; // 1 hour
+
+async function fetchAllFeeds() {
+  const now = Date.now();
+
+  // Return cached if fresh
+  if (feedCache.articles.length > 0 && (now - feedCache.lastFetched) < CACHE_TTL) {
+    return feedCache.articles;
+  }
+
+  console.log('📡 Fetching RSS feeds...');
+  const allArticles: any[] = [];
+
+  // Fetch all feeds in parallel, ignore individual failures
+  const results = await Promise.allSettled(
+    RSS_FEEDS.map(async (feed) => {
+      try {
+        const parsed = await rssParser.parseURL(feed.url);
+        const items = (parsed.items || []).slice(0, 8).map((item) => ({
+          title: item.title || 'Untitled',
+          summary: (item.contentSnippet || item.content || '').substring(0, 200).replace(/<[^>]*>/g, '').trim(),
+          url: item.link || '',
+          source: feed.source,
+          tags: (item.categories || []).slice(0, 3),
+          publishedAt: item.isoDate || item.pubDate || new Date().toISOString(),
+        }));
+        return items;
+      } catch (err) {
+        console.warn(`⚠️ Failed to fetch ${feed.source}:`, (err as Error).message);
+        return [];
+      }
+    })
+  );
+
+  for (const result of results) {
+    if (result.status === 'fulfilled') {
+      allArticles.push(...result.value);
+    }
+  }
+
+  // Sort by date (newest first)
+  allArticles.sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime());
+
+  // Cache the results
+  feedCache = { articles: allArticles, lastFetched: now };
+  console.log(`✅ Fetched ${allArticles.length} articles from ${RSS_FEEDS.length} feeds`);
+
+  return allArticles;
+}
+
+// GET auto-fetched feed articles
+app.get('/api/feed', async (req, res) => {
+  try {
+    const articles = await fetchAllFeeds();
+    res.json(articles);
+  } catch (error) {
+    console.error('Error fetching feeds:', error);
+    res.json(feedCache.articles.length > 0 ? feedCache.articles : []);
+  }
+});
+
 // ... app.listen ...
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

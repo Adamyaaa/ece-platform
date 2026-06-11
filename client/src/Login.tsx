@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock, ArrowRight, Github } from 'lucide-react';
 import { signInWithPopup } from "firebase/auth";
-import { auth, googleProvider } from "./firebaseConfig"; // Import our new config
+import { auth, googleProvider, githubProvider } from "./firebaseConfig";
 
 function Login() {
   const [email, setEmail] = useState('');
@@ -50,6 +50,38 @@ function Login() {
     }
   };
 
+  // --- 2. GitHub Login Logic ---
+  const handleGithubLogin = async () => {
+    try {
+      const result = await signInWithPopup(auth, githubProvider);
+      const user = result.user;
+
+      console.log("🐙 GitHub Success:", user.email || user.displayName);
+
+      const response = await axios.post(`${API_URL}/api/google-login`, {
+        email: user.email || `${user.uid}@github.user`,
+        username: user.displayName || user.email?.split('@')[0] || `GitHub_${user.uid.slice(-6)}`,
+        googleId: user.uid
+      });
+
+      localStorage.setItem('token', response.data.token);
+      localStorage.setItem('userId', response.data.user._id);
+      localStorage.setItem('username', response.data.user.username);
+      localStorage.setItem('profilePicture', user.photoURL || response.data.user.profilePicture || '');
+
+      console.log("✅ Backend Sync Success. User ID:", response.data.user._id);
+      navigate('/problems');
+
+    } catch (error: any) {
+      console.error("❌ GitHub Login Failed:", error);
+      if (error.code === 'auth/account-exists-with-different-credential') {
+        alert('An account already exists with this email using a different sign-in method. Try Google instead.');
+      } else {
+        alert("GitHub Login Failed. Check console.");
+      }
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     console.log("Manual login attempt:", { email, password });
@@ -78,7 +110,10 @@ function Login() {
             Continue with Google
           </button>
 
-          <button className="flex items-center justify-center gap-3 bg-gray-800 text-white font-semibold py-3 rounded-lg border border-gray-700 hover:bg-gray-700 transition-colors">
+          <button
+            onClick={handleGithubLogin}
+            className="flex items-center justify-center gap-3 bg-gray-800 text-white font-semibold py-3 rounded-lg border border-gray-700 hover:bg-gray-700 transition-colors"
+          >
             <Github className="w-5 h-5" />
             Continue with GitHub
           </button>

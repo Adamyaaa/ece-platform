@@ -1,21 +1,66 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import axios from 'axios';
+import { API_URL } from './config';
 import { User, Mail, Lock, ArrowRight, Github } from 'lucide-react';
 import { signInWithPopup } from "firebase/auth";
-import { auth, googleProvider } from "./firebaseConfig";
+import { auth, googleProvider, githubProvider } from "./firebaseConfig";
 
 function Signup() {
   const [formData, setFormData] = useState({ username: '', email: '', password: '' });
   const navigate = useNavigate();
 
-  // --- Google Signup Logic (Same as Login) ---
+  // --- Google Signup Logic ---
   const handleGoogleSignup = async () => {
     try {
       const result = await signInWithPopup(auth, googleProvider);
-      console.log("✅ Account Created/Logged in via Google:", result.user.email);
-      navigate('/problems'); // Send them to the app
+      const user = result.user;
+
+      const response = await axios.post(`${API_URL}/api/google-login`, {
+        email: user.email,
+        username: user.displayName || user.email?.split('@')[0],
+        googleId: user.uid
+      });
+
+      localStorage.setItem('token', response.data.token);
+      localStorage.setItem('userId', response.data.user._id);
+      localStorage.setItem('username', response.data.user.username);
+      localStorage.setItem('profilePicture', user.photoURL || response.data.user.profilePicture || '');
+
+      console.log("✅ Google Signup Success:", result.user.email);
+      navigate('/problems');
     } catch (error) {
       console.error("❌ Google Signup Failed:", error);
+      alert("Google Signup Failed. Check console.");
+    }
+  };
+
+  // --- GitHub Signup Logic ---
+  const handleGithubSignup = async () => {
+    try {
+      const result = await signInWithPopup(auth, githubProvider);
+      const user = result.user;
+
+      const response = await axios.post(`${API_URL}/api/google-login`, {
+        email: user.email || `${user.uid}@github.user`,
+        username: user.displayName || user.email?.split('@')[0] || `GitHub_${user.uid.slice(-6)}`,
+        googleId: user.uid
+      });
+
+      localStorage.setItem('token', response.data.token);
+      localStorage.setItem('userId', response.data.user._id);
+      localStorage.setItem('username', response.data.user.username);
+      localStorage.setItem('profilePicture', user.photoURL || response.data.user.profilePicture || '');
+
+      console.log("✅ GitHub Signup Success:", user.email || user.displayName);
+      navigate('/problems');
+    } catch (error: any) {
+      console.error("❌ GitHub Signup Failed:", error);
+      if (error.code === 'auth/account-exists-with-different-credential') {
+        alert('An account already exists with this email using a different sign-in method. Try Google instead.');
+      } else {
+        alert("GitHub Signup Failed. Check console.");
+      }
     }
   };
 
@@ -47,7 +92,10 @@ function Signup() {
             Sign up with Google
           </button>
 
-          <button className="flex items-center justify-center gap-3 bg-gray-800 text-white font-semibold py-3 rounded-lg border border-gray-700 hover:bg-gray-700 transition-colors">
+          <button
+            onClick={handleGithubSignup}
+            className="flex items-center justify-center gap-3 bg-gray-800 text-white font-semibold py-3 rounded-lg border border-gray-700 hover:bg-gray-700 transition-colors"
+          >
             <Github className="w-5 h-5" />
             Sign up with GitHub
           </button>
