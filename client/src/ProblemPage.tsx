@@ -6,6 +6,7 @@ import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 import { Play, RotateCcw, CheckCircle, XCircle, Terminal, GripVertical, GripHorizontal, Activity } from 'lucide-react';
 import DiscussionTab from './components/DiscussionTab';
 import WaveformViewer from './components/WaveformViewer';
+import { useChatContext } from './ChatContext';
 
 interface Problem {
   title: string;
@@ -17,6 +18,7 @@ interface Problem {
 
 function ProblemPage() {
   const { id } = useParams();
+  const { setProblemContext } = useChatContext();
   const [problem, setProblem] = useState<Problem | null>(null);
   const [activeTab, setActiveTab] = useState<'description' | 'discussion'>('description');
 
@@ -98,7 +100,14 @@ function ProblemPage() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [userCode, isRunning]);
 
-  // 4. Loading Check
+  // 4. Publish current problem/code/output so the chat assistant can use it as context
+  useEffect(() => {
+    if (!id) return;
+    setProblemContext({ problemId: id, code: userCode, output });
+    return () => setProblemContext(null);
+  }, [id, userCode, output, setProblemContext]);
+
+  // 5. Loading Check
   if (!problem) return <div className="text-white text-center p-20 animate-pulse">Loading Problem...</div>;
 
   return (

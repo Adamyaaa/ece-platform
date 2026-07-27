@@ -1,6 +1,8 @@
 import React, { Suspense } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Navbar from './navbar';
+import ChatWidget from './components/ChatWidget';
+import { ChatContextProvider } from './ChatContext';
 
 // Lazy Load Pages for Performance
 const Home = React.lazy(() => import('./Home'));
@@ -26,29 +28,32 @@ const Loading = () => (
 function App() {
   return (
     <BrowserRouter>
-      <div className="min-h-screen bg-gray-900 text-white font-sans">
-        <Navbar />
-        <Suspense fallback={<Loading />}>
-          <Routes>
-            {/* Main Pages */}
-            <Route path="/" element={<Home />} />
-            <Route path="/problems" element={<ProblemBank />} />
-            <Route path="/problems/:id" element={<ProblemPage />} />
-            <Route path="/blogs" element={<BlogPage />} />
-            <Route path="/blogs/create" element={<CreateBlog />} />
-            <Route path="/blogs/:id" element={<BlogDetail />} />
+      <ChatContextProvider>
+        <div className="min-h-screen bg-gray-900 text-white font-sans">
+          <Navbar />
+          <Suspense fallback={<Loading />}>
+            <Routes>
+              {/* Main Pages */}
+              <Route path="/" element={<Home />} />
+              <Route path="/problems" element={<ProblemBank />} />
+              <Route path="/problems/:id" element={<ProblemPage />} />
+              <Route path="/blogs" element={<BlogPage />} />
+              <Route path="/blogs/create" element={<CreateBlog />} />
+              <Route path="/blogs/:id" element={<BlogDetail />} />
 
-            <Route path="/contests" element={<ContestList />} />
-            <Route path="/contest/:id" element={<ContestPage />} />
+              <Route path="/contests" element={<ContestList />} />
+              <Route path="/contest/:id" element={<ContestPage />} />
 
-            <Route path="/profile" element={<Profile />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/signup" element={<Signup />} />
-            <Route path="/admin" element={<AdminDashboard />} />
+              <Route path="/profile" element={<Profile />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/signup" element={<Signup />} />
+              <Route path="/admin" element={<AdminDashboard />} />
 
-          </Routes>
-        </Suspense>
-      </div>
+            </Routes>
+          </Suspense>
+          <ChatWidget />
+        </div>
+      </ChatContextProvider>
     </BrowserRouter>
   );
 }
