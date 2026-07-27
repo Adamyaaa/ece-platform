@@ -9,5 +9,8 @@
     "strict": true,
     "skipLibCheck": true             // <--- Ignores errors in library files
   },
-  "include": ["src/**/*"]
+  "include": ["src/**/*"],
+  "ts-node": {
+    "files": true
+  }
 }

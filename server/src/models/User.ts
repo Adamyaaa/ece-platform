@@ -6,6 +6,7 @@ export interface IUser extends Document {
   passwordHash: string;
   profilePicture: string;
   solvedProblems: mongoose.Types.ObjectId[];
+  firebaseUid?: string;
 }
 
 const UserSchema: Schema = new Schema({
@@ -13,7 +14,8 @@ const UserSchema: Schema = new Schema({
   email: { type: String, required: true, unique: true },
   passwordHash: { type: String, required: true },
   profilePicture: { type: String, default: '' },
-  solvedProblems: [{ type: Schema.Types.ObjectId, ref: 'Problem' }]
+  solvedProblems: [{ type: Schema.Types.ObjectId, ref: 'Problem' }],
+  firebaseUid: { type: String, unique: true, sparse: true }
 });
 
 export default mongoose.model<IUser>('User', UserSchema);

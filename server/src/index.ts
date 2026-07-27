@@ -9,6 +9,7 @@ import ContestParticipant from './models/ContestParticipant';
 import Blog from './models/Blog';
 import Article from './models/Article';
 import { hardcodedProblems, STABLE_IDS } from './data/problems';
+import { requireAuth, optionalAuth, requireMongoUser } from './middleware/firebaseAuth';
 
 dotenv.config();
 
@@ -147,16 +148,15 @@ app.post('/api/run', async (req, res) => {
     res.status(500).json({ output: "Server Error: Could not run code.", waveformData: [] });
   }
 });
-app.post('/api/solve', async (req, res) => {
-  const { userId, problemId } = req.body;
+app.post('/api/solve', requireAuth, requireMongoUser, async (req, res) => {
+  const { problemId } = req.body;
 
-  if (!userId || !problemId) {
-    return res.status(400).json({ error: "Missing UserID or ProblemID" });
+  if (!problemId) {
+    return res.status(400).json({ error: "Missing ProblemID" });
   }
 
   try {
-    const user = await User.findById(userId);
-    if (!user) return res.status(404).json({ error: "User not found" });
+    const user = req.mongoUser!;
 
     // Check if problem is already solved to avoid duplicates
     if (!user.solvedProblems.includes(problemId)) {
@@ -191,13 +191,31 @@ app.get('/api/users/:userId', async (req, res) => {
     res.status(500).json({ error: "Server Error" });
   }
 });
-// GOOGLE LOGIN / SIGNUP ROUTE
-app.post('/api/google-login', async (req, res) => {
-  const { email, username } = req.body;
+// GOOGLE/GITHUB LOGIN-SYNC ROUTE
+// Identity (email, uid) comes from the verified Firebase token, never from
+// the request body — the body's `username` is only used as a display-name
+// hint the first time an account is created.
+app.post('/api/google-login', requireAuth, async (req, res) => {
+  const { username } = req.body;
+  const { uid, email } = req.firebaseUser!;
+
+  if (!email) {
+    return res.status(400).json({ error: "Token has no email" });
+  }
 
   try {
-    // 1. Check if user already exists
-    let user = await User.findOne({ email });
+    // 1. Check if this Firebase identity is already linked to a user
+    let user = await User.findOne({ firebaseUid: uid });
+
+    if (!user) {
+      // Fall back to matching by email (pre-existing account) and link it
+      user = await User.findOne({ email });
+      if (user) {
+        user.firebaseUid = uid;
+        await user.save();
+        console.log("🔗 Linked existing user to Firebase UID:", user.username);
+      }
+    }
 
     if (!user) {
       // 2. If NOT, create a new user automatically
@@ -205,6 +223,7 @@ app.post('/api/google-login', async (req, res) => {
       user = new User({
         username: username,
         email: email,
+        firebaseUid: uid,
         passwordHash: "GOOGLE_AUTH_USER", // Placeholder since they don't have a password
         solvedProblems: []
       });
@@ -233,8 +252,12 @@ app.post('/api/google-login', async (req, res) => {
 });
 
 // UPDATE profile picture
-app.put('/api/users/:userId/profile-picture', async (req, res) => {
+app.put('/api/users/:userId/profile-picture', requireAuth, requireMongoUser, async (req, res) => {
   const { profilePicture } = req.body;
+
+  if (req.params.userId !== req.mongoUser!._id!.toString()) {
+    return res.status(403).json({ error: 'Not authorized to edit this profile' });
+  }
 
   try {
     const user = await User.findByIdAndUpdate(
@@ -318,18 +341,19 @@ app.get('/api/comments/:problemId', async (req, res) => {
 });
 
 // POST a new comment (or reply)
-app.post('/api/comments', async (req, res) => {
-  const { problemId, userId, username, text, parentId } = req.body;
+app.post('/api/comments', requireAuth, requireMongoUser, async (req, res) => {
+  const { problemId, text, parentId } = req.body;
+  const user = req.mongoUser!;
 
-  if (!problemId || !userId || !username || !text) {
+  if (!problemId || !text) {
     return res.status(400).json({ error: "Missing required fields" });
   }
 
   try {
     const newComment = new Comment({
       problemId,
-      userId,
-      username,
+      userId: user._id!.toString(),
+      username: user.username,
       text,
       likes: [],
       parentId: parentId || null,
@@ -343,12 +367,8 @@ app.post('/api/comments', async (req, res) => {
 });
 
 // POST toggle like on a comment
-app.post('/api/comments/:id/like', async (req, res) => {
-  const { userId } = req.body;
-
-  if (!userId) {
-    return res.status(400).json({ error: "Missing userId" });
-  }
+app.post('/api/comments/:id/like', requireAuth, requireMongoUser, async (req, res) => {
+  const userId = req.mongoUser!._id!.toString();
 
   try {
     const comment = await Comment.findById(req.params.id);
@@ -369,15 +389,19 @@ app.post('/api/comments/:id/like', async (req, res) => {
 });
 
 // DELETE a comment (by author or admin)
-app.delete('/api/comments/:id', async (req, res) => {
-  const { userId, secret } = req.body;
+app.delete('/api/comments/:id', optionalAuth, async (req, res) => {
+  const { secret } = req.body;
 
   try {
     const comment = await Comment.findById(req.params.id);
     if (!comment) return res.status(404).json({ error: "Comment not found" });
 
     // Allow if the user is the author OR has admin key
-    const isAuthor = userId && comment.userId === userId;
+    let isAuthor = false;
+    if (req.firebaseUser) {
+      const user = await User.findOne({ firebaseUid: req.firebaseUser.uid });
+      isAuthor = !!user && comment.userId === user._id!.toString();
+    }
     const isAdmin = secret === "admin-123";
 
     if (!isAuthor && !isAdmin) {
@@ -471,8 +495,9 @@ app.get('/api/contests/:id', async (req, res) => {
 });
 
 // 4. Join Contest (Register)
-app.post('/api/contests/:id/register', async (req, res) => {
-  const { userId, username } = req.body;
+app.post('/api/contests/:id/register', requireAuth, requireMongoUser, async (req, res) => {
+  const userId = req.mongoUser!._id!.toString();
+  const username = req.mongoUser!.username;
 
   try {
     // Check if already registered
@@ -498,8 +523,9 @@ app.post('/api/contests/:id/register', async (req, res) => {
 });
 
 // 5. Submit Contest Problem
-app.post('/api/contests/:id/submit', async (req, res) => {
-  const { userId, problemId, passed } = req.body;
+app.post('/api/contests/:id/submit', requireAuth, requireMongoUser, async (req, res) => {
+  const { problemId, passed } = req.body;
+  const userId = req.mongoUser!._id!.toString();
   const contestId = req.params.id;
 
   try {
@@ -576,12 +602,13 @@ app.get('/api/blogs/:id', async (req, res) => {
   }
 });
 
-// CREATE a blog (requires userId)
-app.post('/api/blogs', async (req, res) => {
-  const { title, content, tags, authorId, authorName, authorEmail } = req.body;
+// CREATE a blog (requires auth)
+app.post('/api/blogs', requireAuth, requireMongoUser, async (req, res) => {
+  const { title, content, tags } = req.body;
+  const author = req.mongoUser!;
 
-  if (!title || !content || !authorId || !authorName) {
-    return res.status(400).json({ error: 'Missing required fields (title, content, authorId, authorName)' });
+  if (!title || !content) {
+    return res.status(400).json({ error: 'Missing required fields (title, content)' });
   }
 
   try {
@@ -593,14 +620,14 @@ app.post('/api/blogs', async (req, res) => {
       title,
       content,
       summary,
-      authorId,
-      authorName,
-      authorEmail: authorEmail || '',
+      authorId: author._id!.toString(),
+      authorName: author.username,
+      authorEmail: author.email || '',
       tags: tags || [],
     });
 
     await blog.save();
-    console.log(`📝 New blog created: "${title}" by ${authorName}`);
+    console.log(`📝 New blog created: "${title}" by ${author.username}`);
     res.json(blog);
   } catch (error) {
     console.error('Error creating blog:', error);
@@ -609,8 +636,9 @@ app.post('/api/blogs', async (req, res) => {
 });
 
 // UPDATE a blog (author only)
-app.put('/api/blogs/:id', async (req, res) => {
-  const { title, content, tags, authorId } = req.body;
+app.put('/api/blogs/:id', requireAuth, requireMongoUser, async (req, res) => {
+  const { title, content, tags } = req.body;
+  const authorId = req.mongoUser!._id!.toString();
 
   try {
     const blog = await Blog.findById(req.params.id);
@@ -634,14 +662,18 @@ app.put('/api/blogs/:id', async (req, res) => {
 });
 
 // DELETE a blog (author or admin)
-app.delete('/api/blogs/:id', async (req, res) => {
-  const { userId, secret } = req.body;
+app.delete('/api/blogs/:id', optionalAuth, async (req, res) => {
+  const { secret } = req.body;
 
   try {
     const blog = await Blog.findById(req.params.id);
     if (!blog) return res.status(404).json({ error: 'Blog not found' });
 
-    const isAuthor = userId && blog.authorId === userId;
+    let isAuthor = false;
+    if (req.firebaseUser) {
+      const user = await User.findOne({ firebaseUid: req.firebaseUser.uid });
+      isAuthor = !!user && blog.authorId === user._id!.toString();
+    }
     const isAdmin = secret === 'admin-123';
 
     if (!isAuthor && !isAdmin) {
@@ -657,9 +689,8 @@ app.delete('/api/blogs/:id', async (req, res) => {
 });
 
 // TOGGLE like on a blog
-app.post('/api/blogs/:id/like', async (req, res) => {
-  const { userId } = req.body;
-  if (!userId) return res.status(400).json({ error: 'Missing userId' });
+app.post('/api/blogs/:id/like', requireAuth, requireMongoUser, async (req, res) => {
+  const userId = req.mongoUser!._id!.toString();
 
   try {
     const blog = await Blog.findById(req.params.id);
