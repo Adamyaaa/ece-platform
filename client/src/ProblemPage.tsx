@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import axios from 'axios';
-import { API_URL } from './config';
+import api from './api';
 import Editor from "@monaco-editor/react";
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 import { Play, RotateCcw, CheckCircle, XCircle, Terminal, GripVertical, GripHorizontal, Activity } from 'lucide-react';
@@ -30,7 +29,7 @@ function ProblemPage() {
 
   // 1. Fetch Data Hook
   useEffect(() => {
-    axios.get(`${API_URL}/api/problems/${id}`)
+    api.get(`/api/problems/${id}`)
       .then((res) => {
         setProblem(res.data);
         setUserCode(res.data.templateCode || "");
@@ -45,7 +44,7 @@ function ProblemPage() {
     setWaveformData([]);
 
     try {
-      const response = await axios.post(`${API_URL}/api/run`, {
+      const response = await api.post(`/api/run`, {
         code: userCode,
         problemId: id
       });
@@ -70,9 +69,8 @@ function ProblemPage() {
 
       // Check for success
       if (cleanOutput.includes("Passed") && !cleanOutput.includes("Failed")) {
-        const userId = localStorage.getItem("userId");
-        if (userId) {
-          await axios.post(`${API_URL}/api/solve`, { userId, problemId: id });
+        if (localStorage.getItem("userId")) {
+          await api.post(`/api/solve`, { problemId: id });
         }
       }
 

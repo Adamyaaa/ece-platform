@@ -197,11 +197,10 @@ app.get('/api/users/:userId', async (req, res) => {
 // hint the first time an account is created.
 app.post('/api/google-login', requireAuth, async (req, res) => {
   const { username } = req.body;
-  const { uid, email } = req.firebaseUser!;
-
-  if (!email) {
-    return res.status(400).json({ error: "Token has no email" });
-  }
+  const { uid } = req.firebaseUser!;
+  // GitHub accounts with no public email have no `email` claim on the token —
+  // synthesize a stable placeholder from the verified uid instead of rejecting.
+  const email = req.firebaseUser!.email || `${uid}@github.user`;
 
   try {
     // 1. Check if this Firebase identity is already linked to a user

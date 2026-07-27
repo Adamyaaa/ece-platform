@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from './api';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { API_URL } from './config';
 import { auth } from './firebaseConfig';
 import { onAuthStateChanged } from 'firebase/auth';
 import { Send, Eye, Edit3, X } from 'lucide-react';
@@ -40,20 +39,14 @@ export default function CreateBlog() {
     if (!title.trim()) { setError('Title is required.'); return; }
     if (!content.trim()) { setError('Content is required.'); return; }
 
-    const userId = localStorage.getItem('userId');
-    if (!userId) { setError('User ID not found. Please log in again.'); return; }
-
     setPublishing(true);
     setError('');
 
     try {
-      const res = await axios.post(`${API_URL}/api/blogs`, {
+      const res = await api.post(`/api/blogs`, {
         title: title.trim(),
         content,
         tags: selectedTags,
-        authorId: userId,
-        authorName: user.name,
-        authorEmail: user.email,
       });
       navigate(`/blogs/${res.data._id}`);
     } catch (err: any) {

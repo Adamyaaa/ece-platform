@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import axios from 'axios';
-import { API_URL } from './config';
+import api from './api';
 import { Code, Trophy, MapPin, AlertTriangle, Camera, Check, X } from 'lucide-react';
 
 const AVATAR_OPTIONS = [
@@ -35,7 +34,7 @@ function Profile() {
       return;
     }
 
-    axios.get(`${API_URL}/api/users/${userId}`)
+    api.get(`/api/users/${userId}`)
       .then(res => {
         setUser(res.data);
         setLoading(false);
@@ -51,7 +50,7 @@ function Profile() {
     if (!userId) return;
     setSaving(true);
     try {
-      const res = await axios.put(`${API_URL}/api/users/${userId}/profile-picture`, {
+      const res = await api.put(`/api/users/${userId}/profile-picture`, {
         profilePicture: url
       });
       setUser(res.data);

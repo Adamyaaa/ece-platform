@@ -1,9 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from './api';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { API_URL } from './config';
 import { ArrowLeft, Calendar, User, Heart, Trash2 } from 'lucide-react';
 
 interface Blog {
@@ -29,7 +28,7 @@ export default function BlogDetail() {
 
   useEffect(() => {
     if (!id) return;
-    axios.get(`${API_URL}/api/blogs/${id}`)
+    api.get(`/api/blogs/${id}`)
       .then(res => {
         setBlog(res.data);
         setLikeCount(res.data.likes?.length || 0);
@@ -42,7 +41,7 @@ export default function BlogDetail() {
   const handleLike = async () => {
     if (!userId) { alert('Please log in to like posts.'); return; }
     try {
-      const res = await axios.post(`${API_URL}/api/blogs/${id}/like`, { userId });
+      const res = await api.post(`/api/blogs/${id}/like`, {});
       setLikeCount(res.data.likes.length);
       setLiked(res.data.likes.includes(userId));
     } catch (err) { console.error(err); }
@@ -51,7 +50,7 @@ export default function BlogDetail() {
   const handleDelete = async () => {
     if (!window.confirm('Delete this blog?')) return;
     try {
-      await axios.delete(`${API_URL}/api/blogs/${id}`, { data: { userId } });
+      await api.delete(`/api/blogs/${id}`, { data: {} });
       navigate('/blogs');
     } catch (err) { console.error(err); }
   };

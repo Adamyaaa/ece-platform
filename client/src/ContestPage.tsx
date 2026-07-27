@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import axios from 'axios';
-import { API_URL } from './config';
+import api from './api';
 import Editor from "@monaco-editor/react";
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 import {
@@ -32,7 +31,7 @@ function ContestPage() {
   useEffect(() => {
     const fetchContest = async () => {
       try {
-        const res = await axios.get(`${API_URL}/api/contests/${id}`);
+        const res = await api.get(`/api/contests/${id}`);
         setContest(res.data);
 
         // Initial Code Setup (if problems exist)
@@ -107,7 +106,7 @@ function ContestPage() {
 
     try {
       // 1. Run Logic
-      const runRes = await axios.post(`${API_URL}/api/run`, {
+      const runRes = await api.post(`/api/run`, {
         code: userCode,
         problemId: problem._id
       });
@@ -125,15 +124,10 @@ function ContestPage() {
       // 2. Submit to Contest API
       if (userId) {
         // Register first! (Idempotent)
-        const username = localStorage.getItem("username") || "User";
-        await axios.post(`${API_URL}/api/contests/${id}/register`, {
-          userId,
-          username
-        });
+        await api.post(`/api/contests/${id}/register`, {});
 
         // Then Submit
-        await axios.post(`${API_URL}/api/contests/${id}/submit`, {
-          userId,
+        await api.post(`/api/contests/${id}/submit`, {
           problemId: problem._id,
           passed
         });

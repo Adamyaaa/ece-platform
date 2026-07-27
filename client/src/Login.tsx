@@ -1,5 +1,4 @@
-import axios from 'axios';
-import { API_URL } from './config';
+import { syncFirebaseUser } from './api';
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock, ArrowRight, Github } from 'lucide-react';
@@ -25,23 +24,12 @@ function Login() {
 
       console.log("🔥 Firebase Success:", user.email);
 
-      // 2. SEND USER DATA TO YOUR BACKEND (The missing step!)
-      // We send the email and name so the backend can create/find the user in MongoDB
-      const response = await axios.post(`${API_URL}/api/google-login`, {
-        email: user.email,
-        username: user.displayName || user.email?.split('@')[0], // Fallback username
-        googleId: user.uid
-      });
+      // 2. SYNC WITH BACKEND (find-or-create the Mongo user for this Firebase identity)
+      const syncedUser = await syncFirebaseUser(user);
 
-      // 3. SAVE THE MONGODB USER ID (Crucial for Profile & Solved Problems)
-      localStorage.setItem('token', response.data.token);
-      localStorage.setItem('userId', response.data.user._id);
-      localStorage.setItem('username', response.data.user.username);
-      localStorage.setItem('profilePicture', response.data.user.profilePicture || '');
+      console.log("✅ Backend Sync Success. User ID:", syncedUser._id);
 
-      console.log("✅ Backend Sync Success. User ID:", response.data.user._id);
-
-      // 4. Navigate
+      // 3. Navigate
       navigate('/problems');
 
     } catch (error) {
@@ -58,18 +46,9 @@ function Login() {
 
       console.log("🐙 GitHub Success:", user.email || user.displayName);
 
-      const response = await axios.post(`${API_URL}/api/google-login`, {
-        email: user.email || `${user.uid}@github.user`,
-        username: user.displayName || user.email?.split('@')[0] || `GitHub_${user.uid.slice(-6)}`,
-        googleId: user.uid
-      });
+      const syncedUser = await syncFirebaseUser(user);
 
-      localStorage.setItem('token', response.data.token);
-      localStorage.setItem('userId', response.data.user._id);
-      localStorage.setItem('username', response.data.user.username);
-      localStorage.setItem('profilePicture', user.photoURL || response.data.user.profilePicture || '');
-
-      console.log("✅ Backend Sync Success. User ID:", response.data.user._id);
+      console.log("✅ Backend Sync Success. User ID:", syncedUser._id);
       navigate('/problems');
 
     } catch (error: any) {

@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import axios from 'axios';
-import { API_URL } from './config';
+import api from './api';
 import { Terminal, CheckCircle, ArrowRight, Search, Filter, Zap, Trophy, Target } from 'lucide-react';
 import { auth } from './firebaseConfig';
 import { onAuthStateChanged } from 'firebase/auth';
@@ -23,7 +22,7 @@ function ProblemBank() {
   const [difficultyFilter, setDifficultyFilter] = useState<string>('All');
 
   useEffect(() => {
-    axios.get(`${API_URL}/api/problems`)
+    api.get(`/api/problems`)
       .then((res) => setProblems(res.data))
       .catch((err) => console.error("Error fetching problems:", err));
 
@@ -32,7 +31,7 @@ function ProblemBank() {
         const userId = localStorage.getItem("userId");
         if (userId) {
           try {
-            const userRes = await axios.get(`${API_URL}/api/users/${userId}`);
+            const userRes = await api.get(`/api/users/${userId}`);
             setSolvedIds(userRes.data.solvedProblems || []);
           } catch (error) {
             console.error("Error fetching user data:", error);

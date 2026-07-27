@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import axios from 'axios';
-import { API_URL } from './config';
+import { syncFirebaseUser } from './api';
 import { User, Mail, Lock, ArrowRight, Github } from 'lucide-react';
 import { signInWithPopup } from "firebase/auth";
 import { auth, googleProvider, githubProvider } from "./firebaseConfig";
@@ -16,16 +15,7 @@ function Signup() {
       const result = await signInWithPopup(auth, googleProvider);
       const user = result.user;
 
-      const response = await axios.post(`${API_URL}/api/google-login`, {
-        email: user.email,
-        username: user.displayName || user.email?.split('@')[0],
-        googleId: user.uid
-      });
-
-      localStorage.setItem('token', response.data.token);
-      localStorage.setItem('userId', response.data.user._id);
-      localStorage.setItem('username', response.data.user.username);
-      localStorage.setItem('profilePicture', user.photoURL || response.data.user.profilePicture || '');
+      await syncFirebaseUser(user);
 
       console.log("✅ Google Signup Success:", result.user.email);
       navigate('/problems');
@@ -41,16 +31,7 @@ function Signup() {
       const result = await signInWithPopup(auth, githubProvider);
       const user = result.user;
 
-      const response = await axios.post(`${API_URL}/api/google-login`, {
-        email: user.email || `${user.uid}@github.user`,
-        username: user.displayName || user.email?.split('@')[0] || `GitHub_${user.uid.slice(-6)}`,
-        googleId: user.uid
-      });
-
-      localStorage.setItem('token', response.data.token);
-      localStorage.setItem('userId', response.data.user._id);
-      localStorage.setItem('username', response.data.user.username);
-      localStorage.setItem('profilePicture', user.photoURL || response.data.user.profilePicture || '');
+      await syncFirebaseUser(user);
 
       console.log("✅ GitHub Signup Success:", user.email || user.displayName);
       navigate('/problems');
