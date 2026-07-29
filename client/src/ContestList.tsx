@@ -56,7 +56,7 @@ function ContestList() {
         {/* Contest List */}
         <div className="flex flex-col gap-6">
           {contests.length === 0 && (
-            <div className="text-center text-gray-500 py-10">No contests scheduled. check back later.</div>
+            <div className="text-center text-gray-500 py-10">No contests scheduled. Check back later.</div>
           )}
 
           {contests.map((contest) => {
