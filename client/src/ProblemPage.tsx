@@ -51,7 +51,7 @@ function ProblemPage() {
         problemId: id
       });
 
-      let rawOutput = response.data.output;
+      const rawOutput = response.data.output;
       const waveLines: string[] = response.data.waveformData || [];
 
       // 🧹 CLEANUP: Remove file paths, system noise, AND the $finish message
