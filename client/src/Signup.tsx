@@ -59,7 +59,7 @@ function Signup() {
 
         {/* --- Social Signup --- */}
         <div className="flex flex-col gap-3 mb-6">
-          <button 
+          <button
             onClick={handleGoogleSignup}
             className="flex items-center justify-center gap-3 bg-white text-black font-semibold py-3 rounded-lg hover:bg-gray-200 transition-colors"
           >
@@ -94,8 +94,8 @@ function Signup() {
             <label className="block text-sm font-medium text-gray-400 mb-2">Username</label>
             <div className="relative">
               <User className="absolute left-3 top-3 text-gray-500" size={20} />
-              <input 
-                type="text" 
+              <input
+                type="text"
                 className="w-full bg-gray-800 border border-gray-700 rounded-lg py-3 pl-10 pr-4 text-white focus:border-blue-500 focus:outline-none transition-all"
                 placeholder="coding_wizard"
                 onChange={(e) => setFormData({...formData, username: e.target.value})}
@@ -108,8 +108,8 @@ function Signup() {
             <label className="block text-sm font-medium text-gray-400 mb-2">Email Address</label>
             <div className="relative">
               <Mail className="absolute left-3 top-3 text-gray-500" size={20} />
-              <input 
-                type="email" 
+              <input
+                type="email"
                 className="w-full bg-gray-800 border border-gray-700 rounded-lg py-3 pl-10 pr-4 text-white focus:border-blue-500 focus:outline-none transition-all"
                 placeholder="you@college.edu"
                 onChange={(e) => setFormData({...formData, email: e.target.value})}
@@ -122,8 +122,8 @@ function Signup() {
             <label className="block text-sm font-medium text-gray-400 mb-2">Password</label>
             <div className="relative">
               <Lock className="absolute left-3 top-3 text-gray-500" size={20} />
-              <input 
-                type="password" 
+              <input
+                type="password"
                 className="w-full bg-gray-800 border border-gray-700 rounded-lg py-3 pl-10 pr-4 text-white focus:border-blue-500 focus:outline-none transition-all"
                 placeholder="••••••••"
                 onChange={(e) => setFormData({...formData, password: e.target.value})}
