@@ -131,8 +131,6 @@ app.get('/api/problems/:id', async (req: Request, res: Response) => {
 
 const PORT = process.env.PORT || 5000;
 
-// ... (your existing database/middleware code) ...
-
 // 🚀 The Run Code Endpoint
 app.post('/api/run', async (req, res) => {
   const { code, problemId } = req.body;
