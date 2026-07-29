@@ -710,7 +710,7 @@ app.delete('/api/blogs/:id', optionalAuth, async (req, res) => {
     }
 
     await Blog.findByIdAndDelete(req.params.id);
-    deleteChunk('blog', req.params.id);
+    deleteChunk('blog', req.params.id as string);
     res.json({ success: true });
   } catch (error) {
     console.error('Error deleting blog:', error);
