@@ -12,8 +12,8 @@ interface Problem {
   title: string;
   description: string;
   templateCode: string;
-  difficulty: string; // Added
-  category?: string;  // Added
+  difficulty: string;
+  category?: string;
 }
 
 function ProblemPage() {
