@@ -150,7 +150,7 @@ function Home() {
 }
 
 // Helper Component for the cards
-function FeatureCard({ icon, title, desc }: { icon: any, title: string, desc: string }) {
+function FeatureCard({ icon, title, desc }: { icon: React.ReactNode, title: string, desc: string }) {
   return (
     <div className="glass-card p-10 rounded-2xl hover:-translate-y-2 group">
       <div className="mb-6 bg-white/5 w-16 h-16 rounded-2xl flex items-center justify-center border border-white/10 group-hover:scale-110 transition-transform duration-300">
