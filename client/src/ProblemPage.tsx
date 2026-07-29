@@ -199,7 +199,7 @@ function ProblemPage() {
                   <button
                     onClick={handleRunCode}
                     disabled={isRunning}
-                    title="Run Code (Alt + Shift + R)" // <--- TOOLTIP ADDED HERE
+                    title="Run Code (Alt + Shift + R)"
                     className={`flex items-center gap-2 px-3 py-1 rounded text-xs font-bold transition-all ${isRunning ? 'bg-blue-900/50 text-blue-300 cursor-wait' : 'bg-green-600 hover:bg-green-500 text-white'
                       }`}
                   >
