@@ -11,6 +11,7 @@ import Article from './models/Article';
 import { hardcodedProblems, STABLE_IDS } from './data/problems';
 import { requireAuth, optionalAuth, requireMongoUser } from './middleware/firebaseAuth';
 import { upsertChunk, deleteChunk } from './rag';
+import { runVerilog } from './judge/verilogRunner';
 
 dotenv.config();
 
@@ -129,8 +130,6 @@ app.get('/api/problems/:id', async (req: Request, res: Response) => {
 });
 
 const PORT = process.env.PORT || 5000;
-// Import the judge function
-import { runVerilog } from './judge/verilogRunner';
 
 // ... (your existing database/middleware code) ...
 
