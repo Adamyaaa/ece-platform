@@ -63,7 +63,6 @@ function Login() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Manual login attempt:", { email, password });
   };
 
   return (
