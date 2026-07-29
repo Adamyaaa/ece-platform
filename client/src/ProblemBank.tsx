@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from './api';
-import { Terminal, CheckCircle, ArrowRight, Search, Filter, Zap, Trophy, Target } from 'lucide-react';
+import { Terminal, CheckCircle, ArrowRight, Search, Zap, Trophy, Target } from 'lucide-react';
 import { auth } from './firebaseConfig';
 import { onAuthStateChanged } from 'firebase/auth';
 
