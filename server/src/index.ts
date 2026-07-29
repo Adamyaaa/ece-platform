@@ -305,7 +305,7 @@ app.post('/api/problems', async (req, res) => {
   const { secret, title, description, difficulty, category, templateCode, driverCode, testbench } = req.body;
 
   // 1. Simple Security Check
-  if (secret !== "admin-123") { // 👈 You can change this password later
+  if (secret !== "admin-123") {
     return res.status(403).json({ error: "Unauthorized: Wrong Admin Key" });
   }
 
