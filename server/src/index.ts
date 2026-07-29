@@ -564,7 +564,7 @@ app.post('/api/contests/:id/submit', requireAuth, requireMongoUser, async (req, 
       return res.status(400).json({ error: "Contest is not active" });
     }
 
-    let participant = await ContestParticipant.findOne({ contestId, userId });
+    const participant = await ContestParticipant.findOne({ contestId, userId });
     if (!participant) return res.status(403).json({ error: "Not registered" });
 
     // Initialize problem status if not present
