@@ -47,7 +47,6 @@ function Signup() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Manual Signup attempt:", formData);
   };
 
   return (
