@@ -50,7 +50,7 @@ function AdminDashboard() {
       .catch(err => console.error(err));
   }, []);
 
-  const handleChange = (e: any) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
