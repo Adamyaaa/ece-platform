@@ -10,10 +10,12 @@ import Blog from './models/Blog';
 import Article from './models/Article';
 import { hardcodedProblems, STABLE_IDS } from './data/problems';
 import { requireAuth, optionalAuth, requireMongoUser } from './middleware/firebaseAuth';
-import { upsertChunk, deleteChunk } from './rag';
+import { upsertChunk, deleteChunk, retrieveContext } from './rag';
 import { runVerilog } from './judge/verilogRunner';
 import Comment from './models/Comment';
 import RSSParser from 'rss-parser';
+import Anthropic from '@anthropic-ai/sdk';
+import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 
 dotenv.config();
 
@@ -867,9 +869,6 @@ app.get('/api/feed', async (req, res) => {
 // =========================================
 // AI CHAT ("Ask VeriCode AI")
 // =========================================
-import Anthropic from '@anthropic-ai/sdk';
-import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
-import { retrieveContext } from './rag';
 
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || '';
 const anthropic = ANTHROPIC_API_KEY ? new Anthropic({ apiKey: ANTHROPIC_API_KEY }) : null;
