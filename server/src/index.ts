@@ -13,6 +13,7 @@ import { requireAuth, optionalAuth, requireMongoUser } from './middleware/fireba
 import { upsertChunk, deleteChunk } from './rag';
 import { runVerilog } from './judge/verilogRunner';
 import Comment from './models/Comment';
+import RSSParser from 'rss-parser';
 
 dotenv.config();
 
@@ -789,7 +790,6 @@ app.delete('/api/articles/:id', async (req, res) => {
 // =========================================
 // AUTO-FETCHED RSS FEED ARTICLES
 // =========================================
-import RSSParser from 'rss-parser';
 
 const rssParser = new RSSParser();
 
