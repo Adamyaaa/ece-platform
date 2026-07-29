@@ -11,11 +11,6 @@ function Login() {
   const navigate = useNavigate(); // Hook to move user after login
 
   // --- 1. Google Login Logic ---
-  // Add this import at the top
-
-
-  // ... inside the component ...
-
   const handleGoogleLogin = async () => {
     try {
       // 1. Authenticate with Google (Firebase)
