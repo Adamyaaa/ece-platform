@@ -12,6 +12,7 @@ import { hardcodedProblems, STABLE_IDS } from './data/problems';
 import { requireAuth, optionalAuth, requireMongoUser } from './middleware/firebaseAuth';
 import { upsertChunk, deleteChunk } from './rag';
 import { runVerilog } from './judge/verilogRunner';
+import Comment from './models/Comment';
 
 dotenv.config();
 
@@ -351,7 +352,6 @@ app.delete('/api/problems/:id', async (req, res) => {
 });
 
 // ========== DISCUSSION / COMMENTS ROUTES ==========
-import Comment from './models/Comment';
 
 // GET all comments for a problem
 app.get('/api/comments/:problemId', async (req, res) => {
