@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Cpu, User, LogOut } from 'lucide-react';
-import { auth } from './firebaseConfig'; // Import auth
+import { auth } from './firebaseConfig';
 import { onAuthStateChanged, signOut, User as FirebaseUser } from 'firebase/auth';
 
 function Navbar() {
