@@ -111,7 +111,7 @@ function ContestPage() {
         problemId: problem._id
       });
 
-      let cleanOutput = runRes.data.output
+      const cleanOutput = runRes.data.output
         .replace(/.*\.vvp:.*\n?/g, "")
         .replace(/^VCD info:.*\n?/g, "")
         .replace(/.*\$finish called at.*\n?/g, "")
