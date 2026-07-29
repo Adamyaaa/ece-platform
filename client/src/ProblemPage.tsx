@@ -55,7 +55,7 @@ function ProblemPage() {
       const waveLines: string[] = response.data.waveformData || [];
 
       // 🧹 CLEANUP: Remove file paths, system noise, AND the $finish message
-      let cleanOutput = rawOutput
+      const cleanOutput = rawOutput
         .replace(/.*\.vvp:.*\n?/g, "")       // Removes "temp/xyz/testbench.vvp"
         .replace(/^VCD info:.*\n?/g, "")     // Removes "VCD info: dumpfile..."
         .replace(/.*\$finish called at.*\n?/g, "") // Removes "$finish called at..."
