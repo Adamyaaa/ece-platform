@@ -71,7 +71,7 @@ function Login() {
         {/* --- Social Login Section --- */}
         <div className="flex flex-col gap-3 mb-6">
           <button
-            onClick={handleGoogleLogin} // <--- Attached the function here
+            onClick={handleGoogleLogin}
             className="flex items-center justify-center gap-3 bg-white text-black font-semibold py-3 rounded-lg hover:bg-gray-200 transition-colors"
           >
             <svg className="w-5 h-5" viewBox="0 0 24 24">
@@ -98,7 +98,6 @@ function Login() {
           <div className="h-px bg-gray-700 flex-1"></div>
         </div>
 
-        {/* ... (Keep the rest of your form the same) ... */}
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
             <label className="block text-sm font-medium text-gray-400 mb-2">Email Address</label>
