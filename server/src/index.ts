@@ -993,5 +993,4 @@ app.post('/api/chat', requireAuth, requireMongoUser, chatLimiter, async (req, re
   }
 });
 
-// ... app.listen ...
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
