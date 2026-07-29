@@ -54,7 +54,7 @@ function ContestPage() {
   }, [id]);
 
   // 2. Timer Logic
-  const calculateTime = (data: any) => {
+  const calculateTime = (data: { startTime: string; endTime: string }) => {
     const now = Date.now();
     const start = new Date(data.startTime).getTime();
     const end = new Date(data.endTime).getTime();
