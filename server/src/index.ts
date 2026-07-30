@@ -14,7 +14,7 @@ import { upsertChunk, deleteChunk, retrieveContext } from './rag';
 import { runVerilog } from './judge/verilogRunner';
 import Comment from './models/Comment';
 import RSSParser from 'rss-parser';
-import Anthropic from '@anthropic-ai/sdk';
+import { GoogleGenAI } from '@google/genai';
 import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 
 dotenv.config();
@@ -870,8 +870,9 @@ app.get('/api/feed', async (req, res) => {
 // AI CHAT ("Ask VeriCode AI")
 // =========================================
 
-const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || '';
-const anthropic = ANTHROPIC_API_KEY ? new Anthropic({ apiKey: ANTHROPIC_API_KEY }) : null;
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
+const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+const genAI = GEMINI_API_KEY ? new GoogleGenAI({ apiKey: GEMINI_API_KEY }) : null;
 
 const chatLimiter = rateLimit({
   windowMs: 10 * 60 * 1000, // 10 minutes
@@ -891,9 +892,9 @@ const MAX_CHAT_MESSAGES = 10;
 const MAX_MESSAGE_LENGTH = 4000;
 
 app.post('/api/chat', requireAuth, requireMongoUser, chatLimiter, async (req, res) => {
-  if (!anthropic) {
+  if (!genAI) {
     return res.status(503).json({
-      error: '❌ Server Error: AI chat is not configured. Add ANTHROPIC_API_KEY to the server .env file.',
+      error: '❌ Server Error: AI chat is not configured. Add GEMINI_API_KEY to the server .env file.',
     });
   }
 
@@ -958,31 +959,37 @@ app.post('/api/chat', requireAuth, requireMongoUser, chatLimiter, async (req, re
     res.setHeader('Connection', 'keep-alive');
     res.flushHeaders();
 
-    const stream = anthropic.messages.stream({
-      model: 'claude-haiku-4-5',
-      max_tokens: 1024,
-      system: systemPrompt,
-      messages: trimmedMessages,
-    });
+    const abortController = new AbortController();
+    req.on('close', () => abortController.abort());
 
-    stream.on('text', (delta) => {
-      res.write(`data: ${JSON.stringify({ text: delta })}\n\n`);
-    });
+    const contents = trimmedMessages.map((m) => ({
+      role: m.role === 'assistant' ? 'model' : 'user',
+      parts: [{ text: m.content }],
+    }));
 
-    stream.on('end', () => {
+    try {
+      const stream = await genAI.models.generateContentStream({
+        model: GEMINI_MODEL,
+        contents,
+        config: {
+          systemInstruction: systemPrompt,
+          maxOutputTokens: 1024,
+          abortSignal: abortController.signal,
+        },
+      });
+
+      for await (const chunk of stream) {
+        if (chunk.text) {
+          res.write(`data: ${JSON.stringify({ text: chunk.text })}\n\n`);
+        }
+      }
       res.write('data: [DONE]\n\n');
       res.end();
-    });
-
-    stream.on('error', (err: any) => {
-      console.error('Chat stream error:', err);
+    } catch (streamErr) {
+      console.error('Chat stream error:', streamErr);
       res.write(`data: ${JSON.stringify({ error: 'The AI assistant hit an error. Please try again.' })}\n\n`);
       res.end();
-    });
-
-    req.on('close', () => {
-      stream.controller.abort();
-    });
+    }
   } catch (error) {
     console.error('Chat error:', error);
     if (!res.headersSent) {
