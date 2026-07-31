@@ -11,7 +11,7 @@ export interface IContest extends Document {
   participants: mongoose.Types.ObjectId[];
 }
 
-const ContestSchema: Schema = new Schema({
+const ContestSchema = new Schema<IContest>({
   title: { type: String, required: true },
   description: { type: String, required: true },
   startTime: { type: Date, required: true },
