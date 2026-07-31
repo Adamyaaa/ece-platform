@@ -6,7 +6,7 @@ export interface IProblem extends Document {
   category: string;
   description: string;
   templateCode: string;
-  testbench: string; // <--- ADD THIS LINE
+  testbench: string;
 }
 
 const ProblemSchema: Schema = new Schema({
@@ -15,7 +15,7 @@ const ProblemSchema: Schema = new Schema({
   category: { type: String, required: false, default: "Hardware" }, // Made optional with default
   description: { type: String, required: true },
   templateCode: { type: String, required: true },
-  testbench: { type: String, required: true } // <--- AND THIS LINE
+  testbench: { type: String, required: true }
 });
 
 export default mongoose.model<IProblem>('Problem', ProblemSchema);
