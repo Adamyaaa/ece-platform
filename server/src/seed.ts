@@ -1,5 +1,7 @@
 import mongoose from 'mongoose';
 import Problem from './models/problems';
+import Contest from './models/Contest';
+import ContestParticipant from './models/ContestParticipant';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -397,9 +399,6 @@ const problems = [
     `
   }
 ];
-
-import Contest from './models/Contest';
-import ContestParticipant from './models/ContestParticipant';
 
 const seedDB = async () => {
   try {
