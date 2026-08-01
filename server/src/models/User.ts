@@ -9,7 +9,7 @@ export interface IUser extends Document {
   firebaseUid?: string;
 }
 
-const UserSchema: Schema = new Schema({
+const UserSchema = new Schema<IUser>({
   username: { type: String, required: true, unique: true },
   email: { type: String, required: true, unique: true },
   passwordHash: { type: String, required: true },
