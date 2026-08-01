@@ -2,7 +2,6 @@
 import { initializeApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider, GithubAuthProvider } from "firebase/auth";
 
-// 🔴 REPLACE THESE VALUES WITH THE ONES FROM YOUR FIREBASE CONSOLE
 const firebaseConfig = {
   apiKey: "AIzaSyCZV7emkWS1TW_qM09GykTBMsT1DD8KqY4",
   authDomain: "vericode-86f89.firebaseapp.com",
