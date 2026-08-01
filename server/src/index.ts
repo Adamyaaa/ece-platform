@@ -803,8 +803,17 @@ const RSS_FEEDS = [
   { url: 'https://www.allaboutcircuits.com/feeds/articles.xml', source: 'All About Circuits' },
 ];
 
+interface FeedArticle {
+  title: string;
+  summary: string;
+  url: string;
+  source: string;
+  tags: string[];
+  publishedAt: string;
+}
+
 // In-memory cache: { articles: [], lastFetched: Date }
-let feedCache: { articles: any[]; lastFetched: number } = { articles: [], lastFetched: 0 };
+let feedCache: { articles: FeedArticle[]; lastFetched: number } = { articles: [], lastFetched: 0 };
 const CACHE_TTL = 60 * 60 * 1000; // 1 hour
 
 async function fetchAllFeeds() {
@@ -816,7 +825,7 @@ async function fetchAllFeeds() {
   }
 
   console.log('📡 Fetching RSS feeds...');
-  const allArticles: any[] = [];
+  const allArticles: FeedArticle[] = [];
 
   // Fetch all feeds in parallel, ignore individual failures
   const results = await Promise.allSettled(
