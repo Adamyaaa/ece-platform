@@ -3,6 +3,7 @@ dist/
 .env
 *.env
 .env.*
+vite.config.*.timestamp-*.mjs
 INTERVIEW_GUIDE.md
 QUICK_STUDY_GUIDE.md
 INDEX.md
